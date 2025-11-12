@@ -2,9 +2,17 @@
 
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { useAppKit } from '@reown/appkit/react';
+import { useAccount } from 'wagmi';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { open } = useAppKit();
+  const { address, isConnected } = useAccount();
+
+  const formatAddress = (addr: string) => {
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-strong border-b border-white/10">
@@ -39,11 +47,11 @@ export default function Header() {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <button className="px-6 py-2.5 text-primary-blue font-semibold hover:bg-blue-50 rounded-full transition-all">
-              Sign In
-            </button>
-            <button className="px-6 py-2.5 gradient-primary text-white font-semibold rounded-full hover:shadow-lg transition-all hover:scale-105">
-              Get Started
+            <button 
+              onClick={() => open()}
+              className="px-6 py-2.5 gradient-primary text-white font-semibold rounded-full hover:shadow-lg transition-all hover:scale-105"
+            >
+              {isConnected && address ? formatAddress(address) : 'Connect Wallet'}
             </button>
           </div>
 
@@ -76,11 +84,11 @@ export default function Header() {
               Technology
             </a>
             <div className="flex flex-col gap-2 pt-4">
-              <button className="px-6 py-2.5 text-primary-blue font-semibold hover:bg-blue-50 rounded-full transition-all">
-                Sign In
-              </button>
-              <button className="px-6 py-2.5 gradient-primary text-white font-semibold rounded-full">
-                Get Started
+              <button 
+                onClick={() => open()}
+                className="px-6 py-2.5 gradient-primary text-white font-semibold rounded-full"
+              >
+                {isConnected && address ? formatAddress(address) : 'Connect Wallet'}
               </button>
             </div>
           </div>
