@@ -31,17 +31,17 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-gray-700 hover:text-primary-blue font-medium transition-colors">
-              Features
+            <a href="#register" className="text-gray-700 hover:text-primary-blue font-medium transition-colors">
+              Register
             </a>
-            <a href="#how-it-works" className="text-gray-700 hover:text-primary-blue font-medium transition-colors">
-              How It Works
+            <a href="#marketplace" className="text-gray-700 hover:text-primary-blue font-medium transition-colors">
+              Marketplace
             </a>
-            <a href="#use-cases" className="text-gray-700 hover:text-primary-blue font-medium transition-colors">
-              Use Cases
+            <a href="#earnings" className="text-gray-700 hover:text-primary-blue font-medium transition-colors">
+              Dashboard
             </a>
-            <a href="#tech" className="text-gray-700 hover:text-primary-blue font-medium transition-colors">
-              Technology
+            <a href="#subscription" className="text-gray-700 hover:text-primary-blue font-medium transition-colors">
+              Subcription
             </a>
           </div>
 
@@ -71,17 +71,17 @@ export default function Header() {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden mt-4 pb-4 space-y-4">
-            <a href="#features" className="block text-gray-700 hover:text-primary-blue font-medium">
-              Features
+            <a href="#Register" className="block text-gray-700 hover:text-primary-blue font-medium">
+              Register
             </a>
             <a href="#how-it-works" className="block text-gray-700 hover:text-primary-blue font-medium">
-              How It Works
+              Marketplace
             </a>
             <a href="#use-cases" className="block text-gray-700 hover:text-primary-blue font-medium">
-              Use Cases
+              Dashboard
             </a>
             <a href="#tech" className="block text-gray-700 hover:text-primary-blue font-medium">
-              Technology
+              Subcription
             </a>
             <div className="flex flex-col gap-2 pt-4">
               <button 
