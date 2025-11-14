@@ -186,8 +186,6 @@ export default function MarketplacePage() {
               </Card>
             ))}
           </div>
-
-          </div>
           )}
 
           {!isLoadingDevices && filteredDevices.length === 0 && (

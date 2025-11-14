@@ -25,6 +25,12 @@ export const AIR_QUALITY_MONITOR_SCHEMA =
 export const DEVICE_METADATA_SCHEMA = 
   "string deviceName, string deviceType, string location, uint256 pricePerDataPoint, address ownerAddress, bytes32 entityId, uint256 nonce";
 
+// Device Registry Schema (for marketplace discovery)
+// Format: deviceAddress, ownerAddress, deviceType, isActive, entityId, nonce
+// This allows us to create a registry using the SDK without a custom contract
+export const DEVICE_REGISTRY_SCHEMA = 
+  "address deviceAddress, address ownerAddress, string deviceType, bool isActive, bytes32 entityId, uint256 nonce";
+
 /**
  * Get schema based on device type
  */
@@ -90,3 +96,11 @@ export interface DeviceMetadata {
   nonce: bigint;
 }
 
+export interface DeviceRegistryEntry {
+  deviceAddress: string;
+  ownerAddress: string;
+  deviceType: string;
+  isActive: boolean;
+  entityId: string;
+  nonce: bigint;
+}
