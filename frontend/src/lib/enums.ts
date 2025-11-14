@@ -42,8 +42,9 @@ export enum TimeRange {
 // Registration steps
 export enum RegistrationStep {
   ENTER_SERIAL = 1,
-  FILL_DETAILS = 2,
-  SUCCESS = 3
+  VERIFY_DEVICE = 2,
+  FILL_DETAILS = 3,
+  SUCCESS = 4
 }
 
 // Sort options for marketplace

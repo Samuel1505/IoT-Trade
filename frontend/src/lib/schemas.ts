@@ -31,6 +31,12 @@ export const DEVICE_METADATA_SCHEMA =
 export const DEVICE_REGISTRY_SCHEMA = 
   "address deviceAddress, address ownerAddress, string deviceType, bool isActive, bytes32 entityId, uint256 nonce";
 
+// Device Verification Code Schema (for ownership verification)
+// Format: serialNumber, verificationCode, expiresAt, ownerAddress, entityId, nonce
+// Published to blockchain so devices can read verification codes directly
+export const DEVICE_VERIFICATION_SCHEMA = 
+  "string serialNumber, string verificationCode, uint64 expiresAt, address ownerAddress, bytes32 entityId, uint256 nonce";
+
 /**
  * Get schema based on device type
  */
@@ -101,6 +107,15 @@ export interface DeviceRegistryEntry {
   ownerAddress: string;
   deviceType: string;
   isActive: boolean;
+  entityId: string;
+  nonce: bigint;
+}
+
+export interface DeviceVerificationCode {
+  serialNumber: string;
+  verificationCode: string;
+  expiresAt: bigint;
+  ownerAddress: string;
   entityId: string;
   nonce: bigint;
 }

@@ -18,12 +18,14 @@ import {
   decodeGPSData,
   decodeWeatherData,
   decodeAirQualityData,
-  getSchemaForDeviceType,
+} from "@/lib/somnia";
+import {
   DEVICE_METADATA_SCHEMA,
+  getSchemaForDeviceType,
   type GPSData,
   type WeatherData,
   type AirQualityData,
-} from "@/lib/somnia";
+} from "@/lib/schemas";
 import { DeviceType } from "@/lib/enums";
 import type { DataPoint } from "@/lib/types";
 
