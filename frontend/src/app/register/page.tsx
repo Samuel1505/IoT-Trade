@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAccount, useWalletClient } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { useAppKit } from '@reown/appkit/react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
@@ -18,18 +18,14 @@ import { registerDeviceInRegistry } from '@/services/registryService';
 import { 
   generateAndPublishVerificationCode, 
   verifyDeviceChallenge,
-  sendVerificationCodeToDevice,
-  readVerificationCodeFromBlockchain,
-  getVerificationCodeRemainingTime,
-  hasValidVerificationCode
+  sendVerificationCodeToDevice
 } from '@/services/deviceVerification';
-import { generateDataId } from '@/lib/somnia';
 import { parseError, getUserFriendlyMessage } from '@/lib/errors';
 import { type Address } from 'viem';
+import { BrowserProvider } from 'ethers';
 
 export default function RegisterPage() {
   const { isConnected, address } = useAccount();
-  const { data: walletClient } = useWalletClient();
   const { open } = useAppKit();
   const router = useRouter();
   const { addUserDevice } = useApp();
@@ -66,8 +62,39 @@ export default function RegisterPage() {
     };
   }, []);
 
+  const CHAIN_ID_HEX = '0xc488';
+
+  const getEthersSigner = async () => {
+    if (typeof window === 'undefined' || !(window as any).ethereum) {
+      throw new Error('Wallet not available');
+    }
+
+    const provider = new BrowserProvider((window as any).ethereum);
+    try {
+      await provider.send('wallet_switchEthereumChain', [{ chainId: CHAIN_ID_HEX }]);
+    } catch (switchError: any) {
+      if (switchError.code === 4902) {
+        await provider.send('wallet_addEthereumChain', [{
+          chainId: CHAIN_ID_HEX,
+          chainName: 'Somnia Testnet',
+          rpcUrls: ['https://dream-rpc.somnia.network'],
+          nativeCurrency: {
+            name: 'Somnia Testnet Token',
+            symbol: 'STT',
+            decimals: 18,
+          },
+          blockExplorerUrls: ['https://shannon-explorer.somnia.network'],
+        }]);
+      } else {
+        throw switchError;
+      }
+    }
+
+    return await provider.getSigner();
+  };
+
   const handleVerifySerial = async () => {
-    if (!walletClient || !address) {
+    if (!address) {
       setError('Wallet not connected');
       return;
     }
@@ -76,25 +103,23 @@ export default function RegisterPage() {
     setError(null);
 
     try {
+      const signer = await getEthersSigner();
       // Generate a deterministic device address from serial number
       const seed = serialNumber || `device-${Date.now()}`;
       const hash = seed.split('').reduce((acc, char) => {
-        const hash = ((acc << 5) - acc) + char.charCodeAt(0);
-        return hash & hash;
+        const h = ((acc << 5) - acc) + char.charCodeAt(0);
+        return h & h;
       }, 0);
       const deviceAddr = `0x${Math.abs(hash).toString(16).padStart(40, '0')}` as Address;
       setDeviceAddress(deviceAddr);
       
       // Generate and publish verification code to blockchain
       const result = await generateAndPublishVerificationCode(
-        walletClient,
+        signer,
         serialNumber,
         deviceAddr,
         address
       );
-
-      // Wait for blockchain confirmation before proceeding
-      await walletClient.waitForTransactionReceipt({ hash: result.txHash });
       
       setVerificationChallenge({
         challenge: result.txHash, // Use txHash as challenge identifier
@@ -136,7 +161,7 @@ export default function RegisterPage() {
   };
 
   const handleVerifyDevice = async () => {
-    if (!walletClient || !address || !verificationCode || verificationCode.length !== 6) {
+    if (!address || !verificationCode || verificationCode.length !== 6) {
       if (!verificationCode || verificationCode.length !== 6) {
         setError('Please enter the 6-digit verification code');
       } else {
@@ -166,7 +191,7 @@ export default function RegisterPage() {
   };
 
   const handleResendCode = async () => {
-    if (!walletClient || !address || !deviceAddress || !serialNumber) {
+    if (!address || !deviceAddress || !serialNumber) {
       setError('Wallet not connected');
       return;
     }
@@ -175,16 +200,14 @@ export default function RegisterPage() {
     setError(null);
 
     try {
+      const signer = await getEthersSigner();
       // Generate new verification code and publish to blockchain
       const result = await generateAndPublishVerificationCode(
-        walletClient,
+        signer,
         serialNumber,
         deviceAddress as Address,
         address
       );
-
-      // Wait for blockchain confirmation before updating UI
-      await walletClient.waitForTransactionReceipt({ hash: result.txHash });
       
       setVerificationChallenge({
         challenge: result.txHash,
@@ -206,7 +229,7 @@ export default function RegisterPage() {
   };
 
   const handleRegister = async () => {
-    if (!walletClient || !address || !deviceAddress) {
+    if (!address || !deviceAddress) {
       setError('Wallet not connected');
       return;
     }
@@ -215,10 +238,11 @@ export default function RegisterPage() {
     setError(null);
 
     try {
+      const signer = await getEthersSigner();
       // Register device on-chain using Somnia Data Streams
       // Use owner's address (connected wallet) as publisher, deviceAddress as identifier
       const result = await registerDevice(
-        walletClient,
+        signer,
         formData.name,
         formData.type as DeviceType,
         formData.location,
@@ -227,13 +251,10 @@ export default function RegisterPage() {
         deviceAddress as Address // Device identifier address
       );
 
-      // Wait for verification code publish transaction to confirm
-      await walletClient.waitForTransactionReceipt({ hash: result.txHash });
-
       // Also register device in the registry for marketplace discovery
       try {
         await registerDeviceInRegistry(
-          walletClient,
+          signer,
           deviceAddress as Address,
           address,
           formData.type

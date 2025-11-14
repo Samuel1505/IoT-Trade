@@ -6,7 +6,8 @@
  */
 
 import { SDK, SchemaEncoder, zeroBytes32 } from "@somnia-chain/streams";
-import { createPublicClient, createWalletClient, http, type Address, type Hex, keccak256, toBytes, toHex } from "viem";
+import { createPublicClient, http, type Address, type Hex, keccak256, toBytes, toHex, type Abi } from "viem";
+import { JsonRpcSigner, Contract } from "ethers";
 import { somniaTestnet } from "@/config/wagmi";
 import { 
   GPS_TRACKER_SCHEMA, 
@@ -34,20 +35,19 @@ export function createSomniaSDKPublic() {
   });
 }
 
-/**
- * Initialize Somnia SDK with wallet client (for writing)
- * Requires wallet connection
- */
-export async function createSomniaSDKWithWallet(walletClient: any) {
-  const publicClient = createPublicClient({
-    chain: somniaTestnet,
-    transport: http(somniaTestnet.rpcUrls.default.http[0]),
-  });
+let cachedStreamsContractInfo: { address: Address; abi: Abi } | null = null;
 
-  return new SDK({
-    public: publicClient,
-    wallet: walletClient,
-  });
+async function getStreamsContract(signer: JsonRpcSigner) {
+  if (!cachedStreamsContractInfo) {
+    const sdk = createSomniaSDKPublic();
+    const info = await sdk.streams.getSomniaDataStreamsProtocolInfo();
+    cachedStreamsContractInfo = {
+      address: info.address as Address,
+      abi: info.abi as Abi,
+    };
+  }
+
+  return new Contract(cachedStreamsContractInfo.address, cachedStreamsContractInfo.abi, signer);
 }
 
 /**
@@ -176,23 +176,23 @@ export function decodeAirQualityData(encodedData: Hex): AirQualityData {
  * Publish data to a Somnia stream
  */
 export async function publishData(
-  walletClient: any,
+  signer: JsonRpcSigner,
   dataId: Hex,
   schema: string,
   encodedData: Hex
 ): Promise<Hex> {
-  const sdk = await createSomniaSDKWithWallet(walletClient);
+  const sdk = createSomniaSDKPublic();
   const schemaId = await sdk.streams.computeSchemaId(schema);
-  
-  const txHash = await sdk.streams.set([
+  const contract = await getStreamsContract(signer);
+  const tx = await contract.set([
     {
       id: dataId,
       schemaId: schemaId,
       data: encodedData,
     },
   ]);
-  
-  return txHash;
+  await tx.wait();
+  return tx.hash as Hex;
 }
 
 /**

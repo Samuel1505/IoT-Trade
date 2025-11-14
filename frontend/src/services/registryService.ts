@@ -17,6 +17,7 @@
  */
 
 import type { Address, Hex } from 'viem';
+import { JsonRpcSigner } from 'ethers';
 import { SchemaEncoder, zeroBytes32 } from "@somnia-chain/streams";
 import { publishData, readData, computeSchemaId, generateDataId } from '@/lib/somnia';
 import { DEVICE_REGISTRY_SCHEMA } from '@/lib/schemas';
@@ -76,13 +77,13 @@ export const REGISTRY_DATA_ID: Hex = generateDataId('iot-trade-device-registry')
 /**
  * Register a device in the registry (both on-chain and in local discovery list)
  * 
- * @param walletClient - Wallet client for signing
+ * @param signer - Ethers signer for signing
  * @param deviceAddress - Device address to register
  * @param ownerAddress - Device owner address
  * @param deviceType - Device type
  */
 export async function registerDeviceInRegistry(
-  walletClient: any,
+  signer: JsonRpcSigner,
   deviceAddress: Address,
   ownerAddress: Address,
   deviceType: string
@@ -110,7 +111,7 @@ export async function registerDeviceInRegistry(
 
       // Use device address as dataId for registry entry
       const registryDataId = generateDataId(`registry_${deviceAddress}`);
-      const txHash = await publishData(walletClient, registryDataId, DEVICE_REGISTRY_SCHEMA, encodedData);
+      const txHash = await publishData(signer, registryDataId, DEVICE_REGISTRY_SCHEMA, encodedData);
       return txHash;
     }
   } catch (error) {

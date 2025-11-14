@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount, useWalletClient } from 'wagmi';
+import { useAccount } from 'wagmi';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,11 +20,11 @@ import { publishGPSData, publishWeatherData, publishAirQualityData } from '@/ser
 import { validateGPSData, validateWeatherData, validateAirQualityData, validateWalletConnection, formatValidationErrors } from '@/lib/validation';
 import { parseError, getUserFriendlyMessage, isRecoverableError } from '@/lib/errors';
 import type { Address } from 'viem';
+import { BrowserProvider } from 'ethers';
 
 export default function DeviceSettingsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { address } = useAccount();
-  const { data: walletClient } = useWalletClient();
   const { userDevices, updateUserDevice, deleteUserDevice } = useApp();
   const device = userDevices.find(d => d.id === params.id);
 
@@ -71,6 +71,36 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
     aqi: '45'
   });
 
+  const CHAIN_ID_HEX = '0xc488';
+
+  const getSigner = async () => {
+    if (typeof window === 'undefined' || !(window as any).ethereum) {
+      throw new Error('Wallet not available');
+    }
+    const provider = new BrowserProvider((window as any).ethereum);
+    try {
+      await provider.send('wallet_switchEthereumChain', [{ chainId: CHAIN_ID_HEX }]);
+    } catch (switchError: any) {
+      if (switchError.code === 4902) {
+        await provider.send('wallet_addEthereumChain', [{
+          chainId: CHAIN_ID_HEX,
+          chainName: 'Somnia Testnet',
+          rpcUrls: ['https://dream-rpc.somnia.network'],
+          nativeCurrency: {
+            name: 'Somnia Testnet Token',
+            symbol: 'STT',
+            decimals: 18,
+          },
+          blockExplorerUrls: ['https://shannon-explorer.somnia.network'],
+        }]);
+      } else {
+        throw switchError;
+      }
+    }
+
+    return await provider.getSigner();
+  };
+
   if (!device) {
     return (
       <>
@@ -116,8 +146,8 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
       return;
     }
 
-    if (!walletClient || !device) {
-      setPublishError('Wallet or device not available');
+    if (!device) {
+      setPublishError('Device not available');
       return;
     }
 
@@ -133,8 +163,9 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
     setPublishSuccess(null);
 
     try {
+      const signer = await getSigner();
       const txHash = await publishGPSData(
-        walletClient,
+        signer,
         device.deviceAddress as Address,
         {
           timestamp: BigInt(Date.now()),
@@ -178,8 +209,8 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
       return;
     }
 
-    if (!walletClient || !device) {
-      setPublishError('Wallet or device not available');
+    if (!device) {
+      setPublishError('Device not available');
       return;
     }
 
@@ -195,8 +226,9 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
     setPublishSuccess(null);
 
     try {
+      const signer = await getSigner();
       const txHash = await publishWeatherData(
-        walletClient,
+        signer,
         device.deviceAddress as Address,
         {
           timestamp: BigInt(Date.now()),
@@ -239,8 +271,8 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
       return;
     }
 
-    if (!walletClient || !device) {
-      setPublishError('Wallet or device not available');
+    if (!device) {
+      setPublishError('Device not available');
       return;
     }
 
@@ -256,8 +288,9 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
     setPublishSuccess(null);
 
     try {
+      const signer = await getSigner();
       const txHash = await publishAirQualityData(
-        walletClient,
+        signer,
         device.deviceAddress as Address,
         {
           timestamp: BigInt(Date.now()),
