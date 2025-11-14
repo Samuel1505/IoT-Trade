@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAccount, useWalletClient } from 'wagmi';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,13 +11,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, Save } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertTriangle, Save, Send, Loader2, CheckCircle2, Info } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { DeviceType } from '@/lib/enums';
 import { formatDateTime } from '@/lib/formatters';
+import { publishGPSData, publishWeatherData, publishAirQualityData } from '@/services/deviceService';
+import type { Address } from 'viem';
 
 export default function DeviceSettingsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const { userDevices, updateUserDevice, deleteUserDevice } = useApp();
   const device = userDevices.find(d => d.id === params.id);
 
@@ -26,6 +32,42 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
     price: device?.pricePerDataPoint.toString() || ''
   });
   const [isPublishing, setIsPublishing] = useState(device?.status === 'ONLINE');
+  
+  // Data publishing state
+  const [publishDataTab, setPublishDataTab] = useState<'manual' | 'auto'>('manual');
+  const [isPublishingData, setIsPublishingData] = useState(false);
+  const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  
+  // GPS Data form
+  const [gpsData, setGpsData] = useState({
+    latitude: '37.7749',
+    longitude: '-122.4194',
+    altitude: '0',
+    accuracy: '10',
+    speed: '0',
+    heading: '0'
+  });
+  
+  // Weather Data form
+  const [weatherData, setWeatherData] = useState({
+    temperature: '72.5',
+    humidity: '65.0',
+    pressure: '1013.25',
+    windSpeed: '5.0',
+    windDirection: '180',
+    rainfall: '0.0'
+  });
+  
+  // Air Quality Data form
+  const [airQualityData, setAirQualityData] = useState({
+    pm25: '15',
+    pm10: '25',
+    co2: '400',
+    no2: '20',
+    o3: '50',
+    aqi: '45'
+  });
 
   if (!device) {
     return (
@@ -60,6 +102,121 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
     if (confirm('Are you sure you want to deactivate this device? This will stop all active subscriptions and cannot be undone.')) {
       deleteUserDevice(device.id);
       router.push('/dashboard');
+    }
+  };
+
+  // Handle data publishing
+  const handlePublishGPS = async () => {
+    if (!walletClient || !device || !address) {
+      setPublishError('Wallet not connected');
+      return;
+    }
+
+    setIsPublishingData(true);
+    setPublishError(null);
+    setPublishSuccess(null);
+
+    try {
+      const txHash = await publishGPSData(
+        walletClient,
+        device.deviceAddress as Address,
+        {
+          timestamp: BigInt(Date.now()),
+          latitude: parseFloat(gpsData.latitude),
+          longitude: parseFloat(gpsData.longitude),
+          altitude: parseFloat(gpsData.altitude),
+          accuracy: parseInt(gpsData.accuracy),
+          speed: parseInt(gpsData.speed),
+          heading: parseInt(gpsData.heading),
+        }
+      );
+
+      setPublishSuccess(`Data published! TX: ${txHash.slice(0, 10)}...`);
+      updateUserDevice(device.id, {
+        totalDataPoints: device.totalDataPoints + 1,
+        lastPublished: new Date()
+      });
+    } catch (err: any) {
+      console.error('Error publishing GPS data:', err);
+      setPublishError(err?.message || 'Failed to publish data');
+    } finally {
+      setIsPublishingData(false);
+    }
+  };
+
+  const handlePublishWeather = async () => {
+    if (!walletClient || !device || !address) {
+      setPublishError('Wallet not connected');
+      return;
+    }
+
+    setIsPublishingData(true);
+    setPublishError(null);
+    setPublishSuccess(null);
+
+    try {
+      const txHash = await publishWeatherData(
+        walletClient,
+        device.deviceAddress as Address,
+        {
+          timestamp: BigInt(Date.now()),
+          temperature: parseFloat(weatherData.temperature),
+          humidity: parseFloat(weatherData.humidity),
+          pressure: parseFloat(weatherData.pressure),
+          windSpeed: parseFloat(weatherData.windSpeed),
+          windDirection: parseInt(weatherData.windDirection),
+          rainfall: parseFloat(weatherData.rainfall),
+        }
+      );
+
+      setPublishSuccess(`Data published! TX: ${txHash.slice(0, 10)}...`);
+      updateUserDevice(device.id, {
+        totalDataPoints: device.totalDataPoints + 1,
+        lastPublished: new Date()
+      });
+    } catch (err: any) {
+      console.error('Error publishing weather data:', err);
+      setPublishError(err?.message || 'Failed to publish data');
+    } finally {
+      setIsPublishingData(false);
+    }
+  };
+
+  const handlePublishAirQuality = async () => {
+    if (!walletClient || !device || !address) {
+      setPublishError('Wallet not connected');
+      return;
+    }
+
+    setIsPublishingData(true);
+    setPublishError(null);
+    setPublishSuccess(null);
+
+    try {
+      const txHash = await publishAirQualityData(
+        walletClient,
+        device.deviceAddress as Address,
+        {
+          timestamp: BigInt(Date.now()),
+          pm25: parseInt(airQualityData.pm25),
+          pm10: parseInt(airQualityData.pm10),
+          co2: parseInt(airQualityData.co2),
+          no2: parseInt(airQualityData.no2),
+          o3: parseInt(airQualityData.o3),
+          aqi: parseInt(airQualityData.aqi),
+        }
+      );
+
+      setPublishSuccess(`Data published! TX: ${txHash.slice(0, 10)}...`);
+      updateUserDevice(device.id, {
+        totalDataPoints: device.totalDataPoints + 1,
+        lastPublished: new Date()
+      });
+    } catch (err: any) {
+      console.error('Error publishing air quality data:', err);
+      setPublishError(err?.message || 'Failed to publish data');
+    } finally {
+      setIsPublishingData(false);
     }
   };
 
@@ -182,6 +339,283 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
                     <p className="body-base font-semibold">{formatDateTime(device.lastPublished)}</p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Manual Data Publishing */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Publish Data</CardTitle>
+                <CardDescription>Manually publish data to your device stream on Somnia blockchain</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!address && (
+                  <Alert className="bg-yellow-50 border-warning-yellow">
+                    <Info className="h-4 w-4 text-warning-yellow" />
+                    <AlertDescription className="text-gray-700">
+                      Connect your wallet to publish data
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {publishSuccess && (
+                  <Alert className="bg-green-50 border-green-200">
+                    <CheckCircle2 className="h-4 w-4 text-success-green" />
+                    <AlertDescription className="text-green-700">
+                      {publishSuccess}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {publishError && (
+                  <Alert className="bg-red-50 border-red-200">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-700">
+                      {publishError}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {device.type === DeviceType.GPS_TRACKER && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Latitude</label>
+                        <Input
+                          type="number"
+                          step="0.000001"
+                          value={gpsData.latitude}
+                          onChange={(e) => setGpsData({ ...gpsData, latitude: e.target.value })}
+                          placeholder="37.7749"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Longitude</label>
+                        <Input
+                          type="number"
+                          step="0.000001"
+                          value={gpsData.longitude}
+                          onChange={(e) => setGpsData({ ...gpsData, longitude: e.target.value })}
+                          placeholder="-122.4194"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Altitude (m)</label>
+                        <Input
+                          type="number"
+                          value={gpsData.altitude}
+                          onChange={(e) => setGpsData({ ...gpsData, altitude: e.target.value })}
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Accuracy (m)</label>
+                        <Input
+                          type="number"
+                          value={gpsData.accuracy}
+                          onChange={(e) => setGpsData({ ...gpsData, accuracy: e.target.value })}
+                          placeholder="10"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Speed (km/h)</label>
+                        <Input
+                          type="number"
+                          value={gpsData.speed}
+                          onChange={(e) => setGpsData({ ...gpsData, speed: e.target.value })}
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Heading (degrees)</label>
+                        <Input
+                          type="number"
+                          value={gpsData.heading}
+                          onChange={(e) => setGpsData({ ...gpsData, heading: e.target.value })}
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handlePublishGPS}
+                      disabled={!address || isPublishingData}
+                      className="w-full gradient-primary"
+                    >
+                      {isPublishingData ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Publishing...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Publish GPS Data
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {device.type === DeviceType.WEATHER_STATION && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Temperature (°F)</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={weatherData.temperature}
+                          onChange={(e) => setWeatherData({ ...weatherData, temperature: e.target.value })}
+                          placeholder="72.5"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Humidity (%)</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={weatherData.humidity}
+                          onChange={(e) => setWeatherData({ ...weatherData, humidity: e.target.value })}
+                          placeholder="65.0"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Pressure (hPa)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={weatherData.pressure}
+                          onChange={(e) => setWeatherData({ ...weatherData, pressure: e.target.value })}
+                          placeholder="1013.25"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Wind Speed (mph)</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={weatherData.windSpeed}
+                          onChange={(e) => setWeatherData({ ...weatherData, windSpeed: e.target.value })}
+                          placeholder="5.0"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Wind Direction (degrees)</label>
+                        <Input
+                          type="number"
+                          value={weatherData.windDirection}
+                          onChange={(e) => setWeatherData({ ...weatherData, windDirection: e.target.value })}
+                          placeholder="180"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">Rainfall (inches)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={weatherData.rainfall}
+                          onChange={(e) => setWeatherData({ ...weatherData, rainfall: e.target.value })}
+                          placeholder="0.0"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handlePublishWeather}
+                      disabled={!address || isPublishingData}
+                      className="w-full gradient-primary"
+                    >
+                      {isPublishingData ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Publishing...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Publish Weather Data
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {device.type === DeviceType.AIR_QUALITY_MONITOR && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">PM2.5 (μg/m³)</label>
+                        <Input
+                          type="number"
+                          value={airQualityData.pm25}
+                          onChange={(e) => setAirQualityData({ ...airQualityData, pm25: e.target.value })}
+                          placeholder="15"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">PM10 (μg/m³)</label>
+                        <Input
+                          type="number"
+                          value={airQualityData.pm10}
+                          onChange={(e) => setAirQualityData({ ...airQualityData, pm10: e.target.value })}
+                          placeholder="25"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">CO₂ (ppm)</label>
+                        <Input
+                          type="number"
+                          value={airQualityData.co2}
+                          onChange={(e) => setAirQualityData({ ...airQualityData, co2: e.target.value })}
+                          placeholder="400"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">NO₂ (ppb)</label>
+                        <Input
+                          type="number"
+                          value={airQualityData.no2}
+                          onChange={(e) => setAirQualityData({ ...airQualityData, no2: e.target.value })}
+                          placeholder="20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">O₃ (ppb)</label>
+                        <Input
+                          type="number"
+                          value={airQualityData.o3}
+                          onChange={(e) => setAirQualityData({ ...airQualityData, o3: e.target.value })}
+                          placeholder="50"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="body-sm font-medium">AQI</label>
+                        <Input
+                          type="number"
+                          value={airQualityData.aqi}
+                          onChange={(e) => setAirQualityData({ ...airQualityData, aqi: e.target.value })}
+                          placeholder="45"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handlePublishAirQuality}
+                      disabled={!address || isPublishingData}
+                      className="w-full gradient-primary"
+                    >
+                      {isPublishingData ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Publishing...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Publish Air Quality Data
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

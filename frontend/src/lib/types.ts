@@ -12,7 +12,8 @@ export interface UserDevice {
   totalEarnings: number;
   totalEarningsUsd: number;
   activeSubscribers: number;
-  deviceAddress: string;
+  deviceAddress: string; // Device identifier address (for dataId generation)
+  ownerAddress: string; // Owner's wallet address (publisher address for Somnia streams)
   pricePerDataPoint: number;
   updateFrequency: string;
   uptime: number;

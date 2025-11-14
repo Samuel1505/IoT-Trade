@@ -93,6 +93,7 @@ export default function RegisterPage() {
         totalEarningsUsd: 0,
         activeSubscribers: 0,
         deviceAddress: deviceAddress as Address,
+        ownerAddress: address, // Store owner's wallet address separately
         pricePerDataPoint: parseFloat(formData.price),
         updateFrequency: 'Every 1 minute',
         uptime: 0,

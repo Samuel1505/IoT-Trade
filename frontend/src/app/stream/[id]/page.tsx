@@ -35,9 +35,8 @@ export default function LiveDashboardPage({ params }: { params: { id: string } }
       setError(null);
       
       // Read data from the device owner's stream
-      // For now, we'll use deviceAddress as both publisher and identifier
-      // In production, you'd store the owner's address separately
-      const ownerAddress = device.deviceAddress as `0x${string}`;
+      // Use ownerAddress as publisher, deviceAddress as identifier
+      const ownerAddress = (device.ownerAddress || device.deviceAddress) as `0x${string}`;
       const deviceAddress = device.deviceAddress as `0x${string}`;
       const dataPoint = await readDeviceData(ownerAddress, deviceAddress, device.type);
       
