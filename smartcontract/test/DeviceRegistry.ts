@@ -11,6 +11,7 @@ describe("DeviceRegistry", async () => {
     type: "Weather",
     location: "Lisbon, PT",
     price: 1_000_000_000_000_000n, // 0.001 ETH
+    duration: 7n * 24n * 60n * 60n,
     metadataURI: "ipfs://device-metadata",
   };
 
@@ -26,6 +27,7 @@ describe("DeviceRegistry", async () => {
           sampleDevice.type,
           sampleDevice.location,
           sampleDevice.price,
+          sampleDevice.duration,
           sampleDevice.metadataURI,
         ],
         { account: owner.account },
@@ -55,6 +57,7 @@ describe("DeviceRegistry", async () => {
         sampleDevice.type,
         sampleDevice.location,
         sampleDevice.price,
+        sampleDevice.duration,
         sampleDevice.metadataURI,
       ],
       { account: owner.account },
@@ -68,6 +71,7 @@ describe("DeviceRegistry", async () => {
           sampleDevice.type,
           sampleDevice.location,
           sampleDevice.price,
+          sampleDevice.duration,
           sampleDevice.metadataURI,
         ],
         { account: stranger.account },
@@ -86,6 +90,7 @@ describe("DeviceRegistry", async () => {
         sampleDevice.type,
         sampleDevice.location,
         sampleDevice.price,
+        sampleDevice.duration,
         sampleDevice.metadataURI,
       ],
       { account: owner.account },
@@ -108,6 +113,7 @@ describe("DeviceRegistry", async () => {
         sampleDevice.type,
         sampleDevice.location,
         sampleDevice.price,
+        sampleDevice.duration,
         sampleDevice.metadataURI,
       ],
       { account: owner.account },
@@ -116,20 +122,27 @@ describe("DeviceRegistry", async () => {
     const publicClient = await viem.getPublicClient();
     const ownerBalanceBefore = await publicClient.getBalance({ address: owner.account.address });
 
-    await viem.assertions.emit(
-      registry.write.purchaseAccess([sampleDevice.address], {
-        account: buyer.account,
-        value: sampleDevice.price,
-      }),
-      registry,
-      "DeviceAccessPurchased",
-    );
+    const tx = await registry.write.purchaseAccess([sampleDevice.address], {
+      account: buyer.account,
+      value: sampleDevice.price,
+    });
+    await viem.assertions.emit(tx, registry, "DeviceAccessPurchased");
 
     const paid = await registry.read.totalPaid([buyer.account.address, sampleDevice.address]);
     assert.equal(paid, sampleDevice.price);
 
     const ownerBalanceAfter = await publicClient.getBalance({ address: owner.account.address });
     assert.ok(ownerBalanceAfter > ownerBalanceBefore);
+
+    const expiry = await registry.read.getAccessExpiry([buyer.account.address, sampleDevice.address]);
+    assert.ok(expiry > 0n);
+    const secondTx = await registry.write.purchaseAccess([sampleDevice.address], {
+      account: buyer.account,
+      value: sampleDevice.price,
+    });
+    await viem.assertions.emit(secondTx, registry, "DeviceAccessPurchased");
+    const newExpiry = await registry.read.getAccessExpiry([buyer.account.address, sampleDevice.address]);
+    assert.ok(newExpiry > expiry);
   });
 });
 
