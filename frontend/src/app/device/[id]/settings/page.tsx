@@ -20,7 +20,8 @@ import { publishGPSData, publishWeatherData, publishAirQualityData } from '@/ser
 import { validateGPSData, validateWeatherData, validateAirQualityData, validateWalletConnection, formatValidationErrors } from '@/lib/validation';
 import { parseError, getUserFriendlyMessage, isRecoverableError } from '@/lib/errors';
 import type { Address } from 'viem';
-import { BrowserProvider } from 'ethers';
+import { createWalletClient, custom } from 'viem';
+import { somniaTestnet } from '@/config/wagmi';
 
 export default function DeviceSettingsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -73,32 +74,45 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
 
   const CHAIN_ID_HEX = '0xc488';
 
-  const getSigner = async () => {
+  const getWalletClient = async () => {
+    if (!address) {
+      throw new Error('Wallet not connected');
+    }
     if (typeof window === 'undefined' || !(window as any).ethereum) {
       throw new Error('Wallet not available');
     }
-    const provider = new BrowserProvider((window as any).ethereum);
+    const provider = (window as any).ethereum;
     try {
-      await provider.send('wallet_switchEthereumChain', [{ chainId: CHAIN_ID_HEX }]);
+      await provider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: CHAIN_ID_HEX }],
+      });
     } catch (switchError: any) {
       if (switchError.code === 4902) {
-        await provider.send('wallet_addEthereumChain', [{
-          chainId: CHAIN_ID_HEX,
-          chainName: 'Somnia Testnet',
-          rpcUrls: ['https://dream-rpc.somnia.network'],
-          nativeCurrency: {
-            name: 'Somnia Testnet Token',
-            symbol: 'STT',
-            decimals: 18,
-          },
-          blockExplorerUrls: ['https://shannon-explorer.somnia.network'],
-        }]);
+        await provider.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: CHAIN_ID_HEX,
+            chainName: 'Somnia Testnet',
+            rpcUrls: ['https://dream-rpc.somnia.network'],
+            nativeCurrency: {
+              name: 'Somnia Testnet Token',
+              symbol: 'STT',
+              decimals: 18,
+            },
+            blockExplorerUrls: ['https://shannon-explorer.somnia.network'],
+          }],
+        });
       } else {
         throw switchError;
       }
     }
 
-    return await provider.getSigner();
+    return createWalletClient({
+      account: address as Address,
+      chain: somniaTestnet,
+      transport: custom(provider),
+    });
   };
 
   if (!device) {
@@ -163,9 +177,9 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
     setPublishSuccess(null);
 
     try {
-      const signer = await getSigner();
+      const walletClient = await getWalletClient();
       const txHash = await publishGPSData(
-        signer,
+        walletClient,
         device.deviceAddress as Address,
         {
           timestamp: BigInt(Date.now()),
@@ -226,9 +240,9 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
     setPublishSuccess(null);
 
     try {
-      const signer = await getSigner();
+      const walletClient = await getWalletClient();
       const txHash = await publishWeatherData(
-        signer,
+        walletClient,
         device.deviceAddress as Address,
         {
           timestamp: BigInt(Date.now()),
@@ -288,9 +302,9 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
     setPublishSuccess(null);
 
     try {
-      const signer = await getSigner();
+      const walletClient = await getWalletClient();
       const txHash = await publishAirQualityData(
-        signer,
+        walletClient,
         device.deviceAddress as Address,
         {
           timestamp: BigInt(Date.now()),

@@ -6,8 +6,7 @@
  */
 
 import { SDK, SchemaEncoder, zeroBytes32 } from "@somnia-chain/streams";
-import { createPublicClient, http, type Address, type Hex, keccak256, toBytes, toHex, type Abi } from "viem";
-import { JsonRpcSigner, Contract } from "ethers";
+import { createPublicClient, createWalletClient, custom, http, type Address, type Hex, keccak256, toBytes, toHex, type WalletClient } from "viem";
 import { somniaTestnet } from "@/config/wagmi";
 import { 
   GPS_TRACKER_SCHEMA, 
@@ -35,19 +34,31 @@ export function createSomniaSDKPublic() {
   });
 }
 
-let cachedStreamsContractInfo: { address: Address; abi: Abi } | null = null;
+/**
+ * Create a Somnia wallet client from an EIP-1193 provider
+ */
+export function createSomniaWalletClient(provider: any, account: Address) {
+  return createWalletClient({
+    account,
+    chain: somniaTestnet,
+    transport: custom(provider),
+  });
+}
 
-async function getStreamsContract(signer: JsonRpcSigner) {
-  if (!cachedStreamsContractInfo) {
-    const sdk = createSomniaSDKPublic();
-    const info = await sdk.streams.getSomniaDataStreamsProtocolInfo();
-    cachedStreamsContractInfo = {
-      address: info.address as Address,
-      abi: info.abi as Abi,
-    };
-  }
+/**
+ * Initialize Somnia SDK with wallet client (for writing)
+ * Requires wallet connection
+ */
+export async function createSomniaSDKWithWallet(walletClient: WalletClient) {
+  const publicClient = createPublicClient({
+    chain: somniaTestnet,
+    transport: http(somniaTestnet.rpcUrls.default.http[0]),
+  });
 
-  return new Contract(cachedStreamsContractInfo.address, cachedStreamsContractInfo.abi, signer);
+  return new SDK({
+    public: publicClient,
+    wallet: walletClient,
+  });
 }
 
 /**
@@ -176,23 +187,23 @@ export function decodeAirQualityData(encodedData: Hex): AirQualityData {
  * Publish data to a Somnia stream
  */
 export async function publishData(
-  signer: JsonRpcSigner,
+  walletClient: WalletClient,
   dataId: Hex,
   schema: string,
   encodedData: Hex
 ): Promise<Hex> {
-  const sdk = createSomniaSDKPublic();
+  const sdk = await createSomniaSDKWithWallet(walletClient);
   const schemaId = await sdk.streams.computeSchemaId(schema);
-  const contract = await getStreamsContract(signer);
-  const tx = await contract.set([
+  
+  const txHash = await sdk.streams.set([
     {
       id: dataId,
       schemaId: schemaId,
       data: encodedData,
     },
   ]);
-  await tx.wait();
-  return tx.hash as Hex;
+  
+  return txHash as Hex;
 }
 
 /**

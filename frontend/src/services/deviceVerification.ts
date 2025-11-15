@@ -24,21 +24,21 @@ import {
 } from '@/lib/somnia';
 import { DEVICE_VERIFICATION_SCHEMA } from '@/lib/schemas';
 import type { DeviceType } from '@/lib/enums';
-import { JsonRpcSigner } from 'ethers';
+import type { WalletClient } from 'viem';
 
 // Track verification attempts to prevent brute force (in-memory, optional)
 const verificationAttempts = new Map<string, number>();
 
 /**
  * Generate and publish verification code to blockchain
- * @param signer - Ethers signer for signing the transaction
+ * @param walletClient - Viem wallet client for signing the transaction
  * @param serialNumber - Device serial number
  * @param deviceAddress - Generated device address
  * @param ownerAddress - Owner's wallet address (publisher)
  * @returns Verification code and transaction hash
  */
 export async function generateAndPublishVerificationCode(
-  signer: JsonRpcSigner,
+  walletClient: WalletClient,
   serialNumber: string,
   deviceAddress: Address,
   ownerAddress: Address
@@ -64,7 +64,7 @@ export async function generateAndPublishVerificationCode(
   ]);
   
   // Publish verification code to blockchain
-  const txHash = await publishData(signer, dataId, DEVICE_VERIFICATION_SCHEMA, encodedData);
+  const txHash = await publishData(walletClient, dataId, DEVICE_VERIFICATION_SCHEMA, encodedData);
   
   // Reset attempts for this serial number
   verificationAttempts.set(serialNumber, 0);

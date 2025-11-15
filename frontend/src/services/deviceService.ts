@@ -5,8 +5,7 @@
  * using Somnia Data Streams
  */
 
-import { type Address, type Hex, toHex } from "viem";
-import { JsonRpcSigner } from "ethers";
+import { type Address, type Hex, toHex, type WalletClient } from "viem";
 import { SchemaEncoder, zeroBytes32 } from "@somnia-chain/streams";
 import { 
   computeSchemaId,
@@ -33,7 +32,7 @@ import type { DataPoint } from "@/lib/types";
 /**
  * Register a device on-chain
  * Creates a metadata stream for the device
- * @param signer - Ethers signer for signing transactions
+ * @param walletClient - Viem wallet client for signing transactions
  * @param deviceName - Name of the device
  * @param deviceType - Type of device (GPS, Weather, Air Quality)
  * @param location - Location of the device
@@ -42,7 +41,7 @@ import type { DataPoint } from "@/lib/types";
  * @param deviceAddress - The device's identifier address (for data ID generation)
  */
 export async function registerDevice(
-  signer: JsonRpcSigner,
+  walletClient: WalletClient,
   deviceName: string,
   deviceType: DeviceType,
   location: string,
@@ -71,7 +70,7 @@ export async function registerDevice(
   
   // Publish device metadata
   // Note: The publisher will be the wallet that signs the transaction (ownerAddress)
-  const txHash = await publishData(signer, deviceDataId, DEVICE_METADATA_SCHEMA, encodedMetadata);
+  const txHash = await publishData(walletClient, deviceDataId, DEVICE_METADATA_SCHEMA, encodedMetadata);
   
   return {
     dataId: deviceDataId,
@@ -84,7 +83,7 @@ export async function registerDevice(
  * Publish GPS data to a device stream
  */
 export async function publishGPSData(
-  signer: JsonRpcSigner,
+  walletClient: WalletClient,
   deviceAddress: Address,
   data: Omit<GPSData, "entityId" | "nonce">
 ): Promise<Hex> {
@@ -93,14 +92,14 @@ export async function publishGPSData(
   const nonce = BigInt(Date.now());
   
   const encodedData = encodeGPSData(data, zeroBytes32, nonce);
-  return await publishData(signer, dataId, schema, encodedData);
+  return await publishData(walletClient, dataId, schema, encodedData);
 }
 
 /**
  * Publish Weather data to a device stream
  */
 export async function publishWeatherData(
-  signer: JsonRpcSigner,
+  walletClient: WalletClient,
   deviceAddress: Address,
   data: Omit<WeatherData, "entityId" | "nonce">
 ): Promise<Hex> {
@@ -109,14 +108,14 @@ export async function publishWeatherData(
   const nonce = BigInt(Date.now());
   
   const encodedData = encodeWeatherData(data, zeroBytes32, nonce);
-  return await publishData(signer, dataId, schema, encodedData);
+  return await publishData(walletClient, dataId, schema, encodedData);
 }
 
 /**
  * Publish Air Quality data to a device stream
  */
 export async function publishAirQualityData(
-  signer: JsonRpcSigner,
+  walletClient: WalletClient,
   deviceAddress: Address,
   data: Omit<AirQualityData, "entityId" | "nonce">
 ): Promise<Hex> {
@@ -125,7 +124,7 @@ export async function publishAirQualityData(
   const nonce = BigInt(Date.now());
   
   const encodedData = encodeAirQualityData(data, zeroBytes32, nonce);
-  return await publishData(signer, dataId, schema, encodedData);
+  return await publishData(walletClient, dataId, schema, encodedData);
 }
 
 /**

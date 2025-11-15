@@ -21,8 +21,8 @@ import {
   sendVerificationCodeToDevice
 } from '@/services/deviceVerification';
 import { parseError, getUserFriendlyMessage } from '@/lib/errors';
-import { type Address } from 'viem';
-import { BrowserProvider } from 'ethers';
+import { type Address, createWalletClient, custom } from 'viem';
+import { somniaTestnet } from '@/config/wagmi';
 
 export default function RegisterPage() {
   const { isConnected, address } = useAccount();
@@ -64,33 +64,46 @@ export default function RegisterPage() {
 
   const CHAIN_ID_HEX = '0xc488';
 
-  const getEthersSigner = async () => {
+  const getWalletClient = async () => {
+    if (!address) {
+      throw new Error('Wallet not connected');
+    }
     if (typeof window === 'undefined' || !(window as any).ethereum) {
       throw new Error('Wallet not available');
     }
 
-    const provider = new BrowserProvider((window as any).ethereum);
+    const provider = (window as any).ethereum;
     try {
-      await provider.send('wallet_switchEthereumChain', [{ chainId: CHAIN_ID_HEX }]);
+      await provider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: CHAIN_ID_HEX }],
+      });
     } catch (switchError: any) {
       if (switchError.code === 4902) {
-        await provider.send('wallet_addEthereumChain', [{
-          chainId: CHAIN_ID_HEX,
-          chainName: 'Somnia Testnet',
-          rpcUrls: ['https://dream-rpc.somnia.network'],
-          nativeCurrency: {
-            name: 'Somnia Testnet Token',
-            symbol: 'STT',
-            decimals: 18,
-          },
-          blockExplorerUrls: ['https://shannon-explorer.somnia.network'],
-        }]);
+        await provider.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: CHAIN_ID_HEX,
+            chainName: 'Somnia Testnet',
+            rpcUrls: ['https://dream-rpc.somnia.network'],
+            nativeCurrency: {
+              name: 'Somnia Testnet Token',
+              symbol: 'STT',
+              decimals: 18,
+            },
+            blockExplorerUrls: ['https://shannon-explorer.somnia.network'],
+          }],
+        });
       } else {
         throw switchError;
       }
     }
 
-    return await provider.getSigner();
+    return createWalletClient({
+      account: address as Address,
+      chain: somniaTestnet,
+      transport: custom(provider),
+    });
   };
 
   const handleVerifySerial = async () => {
@@ -103,7 +116,7 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const signer = await getEthersSigner();
+      const walletClient = await getWalletClient();
       // Generate a deterministic device address from serial number
       const seed = serialNumber || `device-${Date.now()}`;
       const hash = seed.split('').reduce((acc, char) => {
@@ -115,7 +128,7 @@ export default function RegisterPage() {
       
       // Generate and publish verification code to blockchain
       const result = await generateAndPublishVerificationCode(
-        signer,
+        walletClient,
         serialNumber,
         deviceAddr,
         address
@@ -200,10 +213,10 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const signer = await getEthersSigner();
+      const walletClient = await getWalletClient();
       // Generate new verification code and publish to blockchain
       const result = await generateAndPublishVerificationCode(
-        signer,
+        walletClient,
         serialNumber,
         deviceAddress as Address,
         address
@@ -238,11 +251,11 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const signer = await getEthersSigner();
+      const walletClient = await getWalletClient();
       // Register device on-chain using Somnia Data Streams
       // Use owner's address (connected wallet) as publisher, deviceAddress as identifier
       const result = await registerDevice(
-        signer,
+        walletClient,
         formData.name,
         formData.type as DeviceType,
         formData.location,
@@ -254,7 +267,7 @@ export default function RegisterPage() {
       // Also register device in the registry for marketplace discovery
       try {
         await registerDeviceInRegistry(
-          signer,
+          walletClient,
           deviceAddress as Address,
           address,
           formData.type

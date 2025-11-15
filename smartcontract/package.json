@@ -1,0 +1,25 @@
+{
+  "name": "smartcontract",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx hardhat test",
+    "deploy:somnia": "npx hardhat run scripts/deploy-device-registry.ts --network somnia"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ignition": "^3.0.5",
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.1",
+    "@nomicfoundation/hardhat-verify": "^3.0.7",
+    "@types/node": "^22.19.1",
+    "dotenv": "^17.2.3",
+    "forge-std": "github:foundry-rs/forge-std#v1.9.4",
+    "hardhat": "^3.0.14",
+    "typescript": "~5.8.0",
+    "viem": "^2.39.0"
+  },
+  "type": "module"
+}
