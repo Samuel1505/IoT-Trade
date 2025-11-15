@@ -1,57 +1,73 @@
-# Sample Hardhat 3 Beta Project (`node:test` and `viem`)
+# IoT-Trade Smart Contracts
 
-This project showcases a Hardhat 3 Beta project using the native Node.js test runner (`node:test`) and the `viem` library for Ethereum interactions.
+This package contains the on-chain components for IoT-Trade. The first contract, `DeviceRegistry`, provides a Streamr-style registry where device owners can publish metadata (name, type, location, price, metadata URI) and toggle availability for the marketplace.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+## Stack
+- Hardhat 3 + `@nomicfoundation/hardhat-toolbox-viem`
+- Node `node:test` runner with `viem` assertions
+- Solidity `0.8.28`
+- Deployment targets: Hardhat local network & Somnia Testnet (chain id `50312`)
 
-## Project Overview
+## Getting Started
 
-This example project includes:
+```bash
+cd smartcontract
+npm install
+```
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using [`node:test`](nodejs.org/api/test.html), the new Node.js native test runner, and [`viem`](https://viem.sh/).
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+Copy the environment template and set credentials:
 
-## Usage
+```bash
+cp .env.example .env
+```
 
-### Running Tests
+| Variable | Description |
+|----------|-------------|
+| `SOMNIA_RPC_URL` | RPC endpoint (default: `https://dream-rpc.somnia.network`) |
+| `SOMNIA_PRIVATE_KEY` | Wallet private key with STT for testnet gas |
 
-To run all the tests in the project, execute the following command:
+## Scripts
 
-```shell
+```bash
+npm run test                 # Run viem-powered Hardhat tests
+npm run deploy:somnia        # Deploy DeviceRegistry to Somnia Testnet
+npm run deploy:local         # Deploy via Ignition on local hardhat network
+```
+
+## Contract Overview
+
+`contracts/DeviceRegistry.sol`
+- `registerDevice` – store metadata for a device address; pushes into global index + owner list
+- `updateDevice` – owner-only metadata updates
+- `setDeviceActive` – toggle device availability
+- `getDevice`, `getDevicesByOwner`, `getAllDevices`, `deviceExists`
+- Emits `DeviceRegistered`, `DeviceUpdated`, `DeviceStatusChanged` for indexing
+
+## Tests
+
+`test/DeviceRegistry.ts` validates:
+- Register & fetch metadata
+- Only owner can update
+- Active flag toggling and owner index maintenance
+
+Run with:
+```bash
 npx hardhat test
 ```
 
-You can also selectively run the Solidity or `node:test` tests:
+## Deployment
 
-```shell
-npx hardhat test solidity
-npx hardhat test nodejs
+### Hardhat Script
+```bash
+npm run deploy:somnia
+# prints the on-chain address on Somnia Testnet
 ```
 
-### Make a deployment to Sepolia
+### Ignition Module
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
+```bash
+npx hardhat ignition deploy ignition/modules/DeviceRegistry.ts
+npx hardhat ignition deploy --network somnia ignition/modules/DeviceRegistry.ts
 ```
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+After deployment, copy the contract address into the frontend configuration to load marketplace devices from on-chain metadata.
