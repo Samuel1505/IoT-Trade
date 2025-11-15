@@ -113,7 +113,8 @@ describe("DeviceRegistry", async () => {
       { account: owner.account },
     );
 
-    const ownerBalanceBefore = await viem.getPublicClient().getBalance(owner.account.address);
+    const publicClient = await viem.getPublicClient();
+    const ownerBalanceBefore = await publicClient.getBalance({ address: owner.account.address });
 
     await viem.assertions.emit(
       registry.write.purchaseAccess([sampleDevice.address], {
@@ -127,7 +128,7 @@ describe("DeviceRegistry", async () => {
     const paid = await registry.read.totalPaid([buyer.account.address, sampleDevice.address]);
     assert.equal(paid, sampleDevice.price);
 
-    const ownerBalanceAfter = await viem.getPublicClient().getBalance(owner.account.address);
+    const ownerBalanceAfter = await publicClient.getBalance({ address: owner.account.address });
     assert.ok(ownerBalanceAfter > ownerBalanceBefore);
   });
 });
