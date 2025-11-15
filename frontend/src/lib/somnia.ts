@@ -7,7 +7,7 @@
 
 import { SDK, SchemaEncoder, zeroBytes32 } from "@somnia-chain/streams";
 import { createPublicClient, http, type Address, type Hex, keccak256, toBytes, toHex, type Abi } from "viem";
-import { JsonRpcSigner, Contract } from "ethers";
+import { JsonRpcSigner, Interface } from "ethers";
 import { somniaTestnet } from "@/config/wagmi";
 import { 
   GPS_TRACKER_SCHEMA, 
@@ -35,19 +35,19 @@ export function createSomniaSDKPublic() {
   });
 }
 
-let cachedStreamsContractInfo: { address: Address; abi: Abi } | null = null;
+let cachedStreamsContractInfo: { address: Address; abi: Abi; iface: Interface } | null = null;
 
-async function getStreamsContract(signer: JsonRpcSigner) {
+async function ensureStreamsContract() {
   if (!cachedStreamsContractInfo) {
     const sdk = createSomniaSDKPublic();
     const info = await sdk.streams.getSomniaDataStreamsProtocolInfo();
     cachedStreamsContractInfo = {
       address: info.address as Address,
       abi: info.abi as Abi,
+      iface: new Interface(info.abi as Abi),
     };
   }
-
-  return new Contract(cachedStreamsContractInfo.address, cachedStreamsContractInfo.abi, signer);
+  return cachedStreamsContractInfo;
 }
 
 /**
@@ -183,14 +183,18 @@ export async function publishData(
 ): Promise<Hex> {
   const sdk = createSomniaSDKPublic();
   const schemaId = await sdk.streams.computeSchemaId(schema);
-  const contract = await getStreamsContract(signer);
-  const tx = await contract.set([
+  const contractInfo = await ensureStreamsContract();
+  const data = contractInfo.iface.encodeFunctionData("set", [[
     {
       id: dataId,
       schemaId: schemaId,
       data: encodedData,
     },
-  ]);
+  ]]);
+  const tx = await signer.sendTransaction({
+    to: contractInfo.address,
+    data,
+  });
   await tx.wait();
   return tx.hash as Hex;
 }
