@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, Info, Download, Loader2 } from 'lucide-react';
-import { DeviceType } from '@/lib/enums';
+import { DeviceType, DeviceStatus } from '@/lib/enums';
 import { useApp } from '@/context/AppContext';
 import { registerDevice } from '@/services/deviceService';
 import { registerDeviceOnChain } from '@/services/registryService';
@@ -163,7 +163,7 @@ export default function RegisterPage() {
         id: deviceId,
         name: formData.name,
         type: formData.type as DeviceType,
-        status: 'ONLINE' as const,
+        status: DeviceStatus.ONLINE,
         qualityScore: 0,
         location: formData.location,
         totalDataPoints: 0,
@@ -391,7 +391,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="body-base font-medium">Price per Data Point (ETH)</label>
+                <label className="body-base font-medium">Price per Data Point (STT)</label>
                 <Input
                   type="number"
                   step="0.00001"
