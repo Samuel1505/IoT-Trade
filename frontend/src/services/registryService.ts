@@ -127,20 +127,84 @@ export async function registerDeviceOnChain(
   },
 ): Promise<Address> {
   const contractAddress = requireContractAddress();
+  const account = getWalletAccount(walletClient);
+
+  // Check if device is already registered (gracefully handle errors)
+  try {
+    const isRegistered = await isDeviceRegistered(params.deviceAddress);
+    if (isRegistered) {
+      throw new Error('Device is already registered on the blockchain');
+    }
+  } catch (error: any) {
+    // If checking fails for reasons other than already registered, log but continue
+    if (error.message?.includes('already registered')) {
+      throw error;
+    }
+    console.warn('Could not check device registration status:', error);
+  }
+
+  // Try to estimate gas, but use a safe default if it fails
+  let gasLimit: bigint | undefined;
+  try {
+    const gasEstimate = await publicClient.estimateContractGas({
+      address: contractAddress,
+      abi: deviceRegistryAbi,
+      functionName: 'registerDevice',
+      args: [
+        params.deviceAddress,
+        params.name,
+        params.deviceType,
+        params.location,
+        params.pricePerDataPoint,
+        params.subscriptionDuration,
+        params.metadataURI,
+      ],
+      account,
+    });
+
+    // Add 30% buffer to gas estimate to ensure transaction goes through
+    gasLimit = (gasEstimate * BigInt(130)) / BigInt(100);
+    
+    // Ensure minimum gas limit
+    if (gasLimit < BigInt(100000)) {
+      gasLimit = BigInt(200000); // Safe default for device registration
+    }
+  } catch (error: any) {
+    // Gas estimation failed - use a safe default
+    console.warn('Gas estimation failed, using default gas limit:', error);
+    gasLimit = BigInt(300000); // Default gas limit for device registration
+  }
+
+  const args: [`0x${string}`, string, string, string, bigint, bigint, string] = [
+    params.deviceAddress,
+    params.name,
+    params.deviceType,
+    params.location,
+    params.pricePerDataPoint,
+    params.subscriptionDuration,
+    params.metadataURI,
+  ];
+
+  // Add gas limit if we have it
+  if (gasLimit) {
+    return walletClient.writeContract({
+      address: contractAddress,
+      abi: deviceRegistryAbi,
+      functionName: 'registerDevice',
+      args,
+      account,
+      chain: walletClient.chain,
+      gas: gasLimit,
+    });
+  }
+
+  // Fallback: let wallet estimate
   return walletClient.writeContract({
     address: contractAddress,
     abi: deviceRegistryAbi,
     functionName: 'registerDevice',
-    args: [
-      params.deviceAddress,
-      params.name,
-      params.deviceType,
-      params.location,
-      params.pricePerDataPoint,
-      params.subscriptionDuration,
-      params.metadataURI,
-    ],
-    account: getWalletAccount(walletClient),
+    args,
+    account,
     chain: walletClient.chain,
   });
 }

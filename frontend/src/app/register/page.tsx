@@ -16,7 +16,7 @@ import { useApp } from '@/context/AppContext';
 import { registerDevice } from '@/services/deviceService';
 import { registerDeviceOnChain } from '@/services/registryService';
 import { parseError, getUserFriendlyMessage } from '@/lib/errors';
-import { type Address, createWalletClient, custom, keccak256, stringToHex } from 'viem';
+import { type Address, createWalletClient, createPublicClient, http, custom, keccak256, stringToHex } from 'viem';
 import { somniaTestnet } from '@/config/wagmi';
 
 function deriveDeviceAddress(serial: string): Address {
@@ -138,7 +138,8 @@ export default function RegisterPage() {
         location: formData.location,
       };
 
-      await registerDeviceOnChain(walletClient, {
+      // Register on-chain first
+      const registryTxHash = await registerDeviceOnChain(walletClient, {
         deviceAddress: deviceAddress as Address,
         name: formData.name,
         deviceType: formData.type,
@@ -148,6 +149,17 @@ export default function RegisterPage() {
         metadataURI: JSON.stringify(metadata),
       });
 
+      // Wait for transaction confirmation
+      const publicClient = createPublicClient({
+        chain: somniaTestnet,
+        transport: http(somniaTestnet.rpcUrls.default.http[0]),
+      });
+      
+      await publicClient.waitForTransactionReceipt({
+        hash: registryTxHash,
+      });
+
+      // Also register with Somnia Data Streams
       const result = await registerDevice(
         walletClient,
         formData.name,
@@ -158,7 +170,7 @@ export default function RegisterPage() {
         deviceAddress as Address,
       );
 
-      const deviceId = `device-${result.txHash.slice(2, 10)}`;
+      const deviceId = `device-${registryTxHash.slice(2, 10)}`;
       const newDevice = {
         id: deviceId,
         name: formData.name,
@@ -194,7 +206,7 @@ export default function RegisterPage() {
         deviceId,
         apiKey: `ak_${Math.random().toString(36).substr(2, 32)}`,
         apiSecret: `as_${Math.random().toString(36).substr(2, 48)}`,
-        txHash: result.txHash,
+        txHash: registryTxHash,
       });
 
       setRegistrationComplete(true);
