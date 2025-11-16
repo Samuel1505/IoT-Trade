@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,30 +9,115 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 import { DeviceIcon } from '@/components/shared/DeviceIcon';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useApp } from '@/context/AppContext';
 import { formatAddress, formatEthAmount, formatUsdAmount, formatDateTime, formatPercentage } from '@/lib/formatters';
 import { mockQuery } from '@/lib/mockData';
-import { SubscriptionDuration } from '@/lib/enums';
+import { SubscriptionDuration, DeviceType, DeviceStatus } from '@/lib/enums';
+import type { MarketplaceDevice } from '@/lib/types';
 
-export default function DevicePreviewPage({ params }: { params: { id: string } }) {
+export default function DevicePreviewPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { marketplaceDevices, addUserSubscription } = useApp();
+  const { marketplaceDevices, addUserSubscription, refreshMarketplaceDevices } = useApp();
   const [selectedDuration, setSelectedDuration] = useState(SubscriptionDuration.SEVEN_DAYS);
+  const [device, setDevice] = useState<MarketplaceDevice | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const defaultTab = searchParams.get('tab') || 'preview';
-  const device = marketplaceDevices.find(d => d.id === params.id);
 
-  if (!device) {
+  useEffect(() => {
+    const loadDevice = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // First try to find in marketplace devices
+        let foundDevice = marketplaceDevices.find(d => d.id === id);
+        
+        // If not found, try to load from registry using device address
+        // Device ID format is: device-{address_slice}, so we need to extract the address
+        if (!foundDevice) {
+          // Try refreshing marketplace first
+          await refreshMarketplaceDevices();
+          foundDevice = marketplaceDevices.find(d => d.id === id);
+          
+          // If still not found, try loading directly from registry
+          // We need to find the device address from the ID
+          // Since IDs are generated as device-${address.slice(2, 10)}, we need to search all devices
+          if (!foundDevice) {
+            const { fetchAllRegistryDevices } = await import('@/services/registryService');
+            const allDevices = await fetchAllRegistryDevices();
+            
+            // Find device where the ID matches
+            const registryDevice = allDevices.find(d => {
+              const deviceId = `device-${d.address.slice(2, 10)}`;
+              return deviceId === id;
+            });
+            
+            if (registryDevice && registryDevice.isActive) {
+              foundDevice = {
+                id: `device-${registryDevice.address.slice(2, 10)}`,
+                name: registryDevice.name,
+                type: registryDevice.deviceType as DeviceType,
+                status: registryDevice.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+                qualityScore: 0,
+                location: registryDevice.location,
+                pricePerDataPoint: registryDevice.pricePerDataPoint,
+                subscribers: 0,
+                owner: registryDevice.owner,
+                updateFrequency: 'Unknown',
+                uptime: 0,
+              };
+            }
+          }
+        }
+        
+        if (foundDevice) {
+          setDevice(foundDevice);
+        } else {
+          setError('Device not found');
+        }
+      } catch (err) {
+        console.error('Error loading device:', err);
+        setError('Failed to load device');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDevice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (isLoading) {
     return (
       <>
         <Header />
         <main className="min-h-screen pt-24 pb-12 px-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <p className="body-lg text-gray-600">Device not found</p>
+          <div className="max-w-4xl mx-auto text-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary-blue" />
+            <p className="body-lg text-gray-600">Loading device...</p>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (error || !device) {
+    return (
+      <>
+        <Header />
+        <main className="min-h-screen pt-24 pb-12 px-6">
+          <div className="max-w-4xl mx-auto text-center py-12">
+            <p className="body-lg text-gray-600 mb-4">{error || 'Device not found'}</p>
+            <Button onClick={() => router.push('/marketplace')} variant="outline">
+              Back to Marketplace
+            </Button>
           </div>
         </main>
       </>
