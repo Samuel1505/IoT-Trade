@@ -31,6 +31,8 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const deviceLoadedRef = useRef(false);
+  const [chartMounted, setChartMounted] = useState(false);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
 
   // Load device by ID - only run once per id
   useEffect(() => {
@@ -238,6 +240,27 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
     
     setLiveData([mockPoint]);
   }, [device, liveData.length]);
+
+  // Mount chart only when chart tab is active and container is ready
+  useEffect(() => {
+    if (viewMode === ViewMode.CHART && chartContainerRef.current) {
+      // Small delay to ensure container has dimensions
+      const timer = setTimeout(() => {
+        if (chartContainerRef.current) {
+          const rect = chartContainerRef.current.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            setChartMounted(true);
+          }
+        }
+      }, 100);
+      return () => {
+        clearTimeout(timer);
+        setChartMounted(false);
+      };
+    } else {
+      setChartMounted(false);
+    }
+  }, [viewMode, liveData.length]);
 
   // Show loading state while loading device
   if (isLoadingDevice) {
@@ -474,36 +497,46 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
                           </Button>
                         ))}
                       </div>
-                      <div className="h-96 min-w-0 w-full">
-                        <ResponsiveContainer width="100%" height="100%" minHeight={384}>
-                          <LineChart data={chartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                            <XAxis 
-                              dataKey="time" 
-                              stroke="#6B7280"
-                              style={{ fontSize: '12px' }}
-                            />
-                            <YAxis 
-                              stroke="#6B7280"
-                              style={{ fontSize: '12px' }}
-                            />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: '#fff',
-                                border: '1px solid #E5E7EB',
-                                borderRadius: '8px'
-                              }}
-                            />
-                            <Line 
-                              type="monotone" 
-                              dataKey="value" 
-                              stroke="#0066FF" 
-                              strokeWidth={2}
-                              dot={{ fill: '#0066FF', r: 3 }}
-                              activeDot={{ r: 5 }}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
+                      <div 
+                        ref={chartContainerRef}
+                        className="h-96 w-full"
+                        style={{ minWidth: 0, minHeight: 384 }}
+                      >
+                        {chartMounted && chartData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                              <XAxis 
+                                dataKey="time" 
+                                stroke="#6B7280"
+                                style={{ fontSize: '12px' }}
+                              />
+                              <YAxis 
+                                stroke="#6B7280"
+                                style={{ fontSize: '12px' }}
+                              />
+                              <Tooltip 
+                                contentStyle={{ 
+                                  backgroundColor: '#fff',
+                                  border: '1px solid #E5E7EB',
+                                  borderRadius: '8px'
+                                }}
+                              />
+                              <Line 
+                                type="monotone" 
+                                dataKey="value" 
+                                stroke="#0066FF" 
+                                strokeWidth={2}
+                                dot={{ fill: '#0066FF', r: 3 }}
+                                activeDot={{ r: 5 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="h-full flex items-center justify-center">
+                            <Loader2 className="w-6 h-6 animate-spin text-primary-blue" />
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
