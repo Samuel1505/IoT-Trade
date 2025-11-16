@@ -117,22 +117,37 @@ export async function discoverMarketplaceDevices(
     }
     
     // Convert RegistryDevice to MarketplaceDevice format
+    const now = Date.now();
     const devices: MarketplaceDevice[] = registryDevices
       .filter(device => device.isActive) // Only show active devices
       .slice(0, limit)
-      .map(device => ({
-        id: `device-${device.address.slice(2, 10)}`,
-        name: device.name,
-        type: device.deviceType as DeviceType,
-        status: device.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
-        qualityScore: 0, // Could calculate from data quality metrics in the future
-        location: device.location,
-        pricePerDataPoint: device.pricePerDataPoint,
-        subscribers: 0, // Would need to track from purchase events or subgraph
-        owner: device.owner,
-        updateFrequency: 'Unknown', // Not stored in registry
-        uptime: 0, // Could calculate from registeredAt timestamp
-      }));
+      .map(device => {
+        // Calculate uptime: time since registration as a percentage
+        // For now, show days since registration (could be enhanced with actual uptime tracking)
+        const registeredAtMs = device.registeredAt;
+        const daysSinceRegistration = Math.floor((now - registeredAtMs) / (1000 * 60 * 60 * 24));
+        const hoursSinceRegistration = (now - registeredAtMs) / (1000 * 60 * 60);
+        
+        // Uptime percentage: 100% if registered recently (within 24h), decreases over time
+        // This is a simplified calculation - real uptime would track actual online/offline periods
+        const uptimePercentage = daysSinceRegistration === 0 
+          ? 100 
+          : Math.max(0, 100 - (daysSinceRegistration * 5)); // Decrease 5% per day as placeholder
+        
+        return {
+          id: `device-${device.address.slice(2, 10)}`,
+          name: device.name,
+          type: device.deviceType as DeviceType,
+          status: device.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+          qualityScore: 0, // Could calculate from data quality metrics in the future
+          location: device.location,
+          pricePerDataPoint: device.pricePerDataPoint,
+          subscribers: 0, // Would need to track from purchase events or subgraph
+          owner: device.owner,
+          updateFrequency: 'Calculating...', // Would need to fetch recent data points to calculate
+          uptime: Math.round(uptimePercentage * 10) / 10, // Round to 1 decimal
+        };
+      });
     
     return devices;
   } catch (error) {

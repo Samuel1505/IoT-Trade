@@ -61,6 +61,14 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
             });
             
             if (registryDevice && registryDevice.isActive) {
+              // Calculate uptime from registration timestamp
+              const now = Date.now();
+              const registeredAtMs = registryDevice.registeredAt;
+              const daysSinceRegistration = Math.floor((now - registeredAtMs) / (1000 * 60 * 60 * 24));
+              const uptimePercentage = daysSinceRegistration === 0 
+                ? 100 
+                : Math.max(0, 100 - (daysSinceRegistration * 5));
+              
               foundDevice = {
                 id: `device-${registryDevice.address.slice(2, 10)}`,
                 name: registryDevice.name,
@@ -71,8 +79,8 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
                 pricePerDataPoint: registryDevice.pricePerDataPoint,
                 subscribers: 0,
                 owner: registryDevice.owner,
-                updateFrequency: 'Unknown',
-                uptime: 0,
+                updateFrequency: 'Calculating...',
+                uptime: Math.round(uptimePercentage * 10) / 10,
               };
             }
           }
@@ -240,11 +248,17 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
                 <CardContent className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="body-sm text-gray-600 mb-1">Update Frequency</p>
-                    <p className="body-base font-semibold">{device.updateFrequency}</p>
+                    <p className="body-base font-semibold">
+                      {device.updateFrequency === 'Unknown' || device.updateFrequency === 'Calculating...' 
+                        ? 'N/A' 
+                        : device.updateFrequency}
+                    </p>
                   </div>
                   <div>
                     <p className="body-sm text-gray-600 mb-1">Uptime</p>
-                    <p className="body-base font-semibold">{formatPercentage(device.uptime)}</p>
+                    <p className="body-base font-semibold">
+                      {device.uptime > 0 ? formatPercentage(device.uptime) : 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <p className="body-sm text-gray-600 mb-1">Subscribers</p>
