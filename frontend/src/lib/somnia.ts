@@ -238,8 +238,22 @@ export async function readData(
   const sdk = createSomniaSDKPublic();
   const schemaId = await sdk.streams.computeSchemaId(schema);
   
-  const data = await sdk.streams.getByKey(schemaId, publisherAddress, dataId);
-  return data;
+  try {
+    const data = await sdk.streams.getByKey(schemaId, publisherAddress, dataId);
+    return data;
+  } catch (err: any) {
+    const message: string = err?.message || '';
+    // If no data exists yet for this publisher/schema/dataId, SDK may revert with index OOB
+    if (
+      message.includes('Array index is out of bounds') ||
+      message.includes('ContractFunctionRevertedError') ||
+      message.includes('ContractFunctionExecutionError')
+    ) {
+      return null;
+    }
+    // Otherwise, rethrow to surface unexpected errors
+    throw err;
+  }
 }
 
 /**
