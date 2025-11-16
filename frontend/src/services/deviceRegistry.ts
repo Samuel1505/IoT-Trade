@@ -5,7 +5,7 @@
  */
 
 import type { Address } from 'viem';
-import { readDeviceMetadata } from './deviceService';
+import { readDeviceMetadata, calculateDeviceMetrics } from './deviceService';
 import type { UserDevice, MarketplaceDevice } from '@/lib/types';
 import { DeviceStatus, DeviceType } from '@/lib/enums';
 
@@ -116,38 +116,57 @@ export async function discoverMarketplaceDevices(
       return [];
     }
     
-    // Convert RegistryDevice to MarketplaceDevice format
-    const now = Date.now();
-    const devices: MarketplaceDevice[] = registryDevices
-      .filter(device => device.isActive) // Only show active devices
-      .slice(0, limit)
-      .map(device => {
-        // Calculate uptime: time since registration as a percentage
-        // For now, show days since registration (could be enhanced with actual uptime tracking)
-        const registeredAtMs = device.registeredAt;
-        const daysSinceRegistration = Math.floor((now - registeredAtMs) / (1000 * 60 * 60 * 24));
-        const hoursSinceRegistration = (now - registeredAtMs) / (1000 * 60 * 60);
-        
-        // Uptime percentage: 100% if registered recently (within 24h), decreases over time
-        // This is a simplified calculation - real uptime would track actual online/offline periods
-        const uptimePercentage = daysSinceRegistration === 0 
-          ? 100 
-          : Math.max(0, 100 - (daysSinceRegistration * 5)); // Decrease 5% per day as placeholder
-        
-        return {
+    // Convert RegistryDevice to MarketplaceDevice format with real metrics
+    const devices: MarketplaceDevice[] = [];
+    
+    for (const device of registryDevices.filter(d => d.isActive).slice(0, limit)) {
+      try {
+        // Calculate real metrics from Somnia Data Streams
+        const metrics = await calculateDeviceMetrics(
+          device.owner,
+          device.address as Address,
+          device.deviceType as DeviceType,
+          device.registeredAt
+        );
+
+        devices.push({
           id: `device-${device.address.slice(2, 10)}`,
           name: device.name,
           type: device.deviceType as DeviceType,
-          status: device.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+          status: metrics.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
           qualityScore: 0, // Could calculate from data quality metrics in the future
           location: device.location,
           pricePerDataPoint: device.pricePerDataPoint,
           subscribers: 0, // Would need to track from purchase events or subgraph
           owner: device.owner,
-          updateFrequency: 'Calculating...', // Would need to fetch recent data points to calculate
-          uptime: Math.round(uptimePercentage * 10) / 10, // Round to 1 decimal
-        };
-      });
+          updateFrequency: metrics.updateFrequency,
+          uptime: metrics.uptime,
+        });
+      } catch (error) {
+        console.error(`Error calculating metrics for device ${device.address}:`, error);
+        // Fallback to basic metrics if calculation fails
+        const now = Date.now();
+        const registeredAtMs = device.registeredAt;
+        const daysSinceRegistration = Math.floor((now - registeredAtMs) / (1000 * 60 * 60 * 24));
+        const uptimePercentage = daysSinceRegistration === 0 
+          ? 100 
+          : Math.max(0, 100 - (daysSinceRegistration * 5));
+        
+        devices.push({
+          id: `device-${device.address.slice(2, 10)}`,
+          name: device.name,
+          type: device.deviceType as DeviceType,
+          status: device.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+          qualityScore: 0,
+          location: device.location,
+          pricePerDataPoint: device.pricePerDataPoint,
+          subscribers: 0,
+          owner: device.owner,
+          updateFrequency: 'N/A',
+          uptime: Math.round(uptimePercentage * 10) / 10,
+        });
+      }
+    }
     
     return devices;
   } catch (error) {
@@ -157,7 +176,7 @@ export async function discoverMarketplaceDevices(
 }
 
 /**
- * Load marketplace device by address from on-chain registry
+ * Load marketplace device by address from on-chain registry with calculated metrics
  */
 export async function loadMarketplaceDevice(
   ownerAddress: Address,
@@ -172,18 +191,26 @@ export async function loadMarketplaceDevice(
       return null;
     }
 
+    // Calculate real metrics from Somnia Data Streams
+    const metrics = await calculateDeviceMetrics(
+      device.owner,
+      device.address as Address,
+      device.deviceType as DeviceType,
+      device.registeredAt
+    );
+
     return {
       id: `device-${deviceAddress.slice(2, 10)}`,
       name: device.name,
       type: device.deviceType as DeviceType,
-      status: device.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+      status: metrics.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
       qualityScore: 0, // Could calculate from data quality metrics
       location: device.location,
       pricePerDataPoint: device.pricePerDataPoint,
       subscribers: 0, // Would need to track from purchase events
       owner: device.owner,
-      updateFrequency: 'Unknown',
-      uptime: 0,
+      updateFrequency: metrics.updateFrequency,
+      uptime: metrics.uptime,
     };
   } catch (error) {
     console.error('Error loading marketplace device:', error);

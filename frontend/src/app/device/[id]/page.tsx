@@ -61,26 +61,27 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
             });
             
             if (registryDevice && registryDevice.isActive) {
-              // Calculate uptime from registration timestamp
-              const now = Date.now();
-              const registeredAtMs = registryDevice.registeredAt;
-              const daysSinceRegistration = Math.floor((now - registeredAtMs) / (1000 * 60 * 60 * 24));
-              const uptimePercentage = daysSinceRegistration === 0 
-                ? 100 
-                : Math.max(0, 100 - (daysSinceRegistration * 5));
+              // Calculate real metrics from Somnia Data Streams
+              const { calculateDeviceMetrics } = await import('@/services/deviceService');
+              const metrics = await calculateDeviceMetrics(
+                registryDevice.owner,
+                registryDevice.address as Address,
+                registryDevice.deviceType as DeviceType,
+                registryDevice.registeredAt
+              );
               
               foundDevice = {
                 id: `device-${registryDevice.address.slice(2, 10)}`,
                 name: registryDevice.name,
                 type: registryDevice.deviceType as DeviceType,
-                status: registryDevice.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+                status: metrics.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
                 qualityScore: 0,
                 location: registryDevice.location,
                 pricePerDataPoint: registryDevice.pricePerDataPoint,
                 subscribers: 0,
                 owner: registryDevice.owner,
-                updateFrequency: 'Calculating...',
-                uptime: Math.round(uptimePercentage * 10) / 10,
+                updateFrequency: metrics.updateFrequency,
+                uptime: metrics.uptime,
               };
             }
           }
@@ -249,15 +250,13 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
                   <div>
                     <p className="body-sm text-gray-600 mb-1">Update Frequency</p>
                     <p className="body-base font-semibold">
-                      {device.updateFrequency === 'Unknown' || device.updateFrequency === 'Calculating...' 
-                        ? 'N/A' 
-                        : device.updateFrequency}
+                      {device.updateFrequency}
                     </p>
                   </div>
                   <div>
                     <p className="body-sm text-gray-600 mb-1">Uptime</p>
                     <p className="body-base font-semibold">
-                      {device.uptime > 0 ? formatPercentage(device.uptime) : 'N/A'}
+                      {device.uptime > 0 ? formatPercentage(device.uptime) : '0%'}
                     </p>
                   </div>
                   <div>

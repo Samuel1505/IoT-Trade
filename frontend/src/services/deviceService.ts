@@ -128,6 +128,121 @@ export async function publishAirQualityData(
 }
 
 /**
+ * Calculate device metrics from data activity
+ * @param publisherAddress - The wallet address that published the data (owner's address)
+ * @param deviceAddress - The device identifier address (used for dataId generation)
+ * @param deviceType - Type of device
+ * @param registeredAtMs - Device registration timestamp in milliseconds
+ */
+export async function calculateDeviceMetrics(
+  publisherAddress: Address,
+  deviceAddress: Address,
+  deviceType: DeviceType,
+  registeredAtMs: number
+): Promise<{
+  updateFrequency: string;
+  uptime: number;
+  lastPublished: Date | null;
+  isActive: boolean;
+}> {
+  try {
+    // Read latest data point to check if device is active
+    const latestData = await readDeviceData(publisherAddress, deviceAddress, deviceType);
+    const now = Date.now();
+    
+    if (!latestData) {
+      // No data published - device is inactive
+      const daysSinceRegistration = (now - registeredAtMs) / (1000 * 60 * 60 * 24);
+      return {
+        updateFrequency: 'No data published',
+        uptime: 0,
+        lastPublished: null,
+        isActive: false,
+      };
+    }
+
+    // Device has published data - calculate metrics
+    const lastPublishedMs = latestData.timestamp.getTime();
+    const timeSinceLastUpdate = now - lastPublishedMs;
+    const timeSinceRegistration = now - registeredAtMs;
+    
+    // Consider device active if published data within last 24 hours
+    const isActive = timeSinceLastUpdate < 24 * 60 * 60 * 1000;
+    
+    // Calculate uptime based on recent activity
+    // If device published recently, calculate percentage of time since registration that it was active
+    // For simplicity, if published within last 24h, assume 100% uptime
+    // If older, decrease based on last update time
+    let uptime = 0;
+    if (isActive) {
+      // Device is currently active
+      const hoursSinceRegistration = timeSinceRegistration / (1000 * 60 * 60);
+      if (hoursSinceRegistration < 24) {
+        // Less than 24 hours since registration, assume 100% uptime
+        uptime = 100;
+      } else {
+        // Calculate based on how recently data was published
+        // If data is within last hour: 100%, within last 6 hours: 95%, etc.
+        const hoursSinceUpdate = timeSinceLastUpdate / (1000 * 60 * 60);
+        if (hoursSinceUpdate < 1) {
+          uptime = 100;
+        } else if (hoursSinceUpdate < 6) {
+          uptime = 95;
+        } else if (hoursSinceUpdate < 12) {
+          uptime = 90;
+        } else {
+          uptime = 85;
+        }
+      }
+    } else {
+      // Device inactive - uptime decreases based on how long since last update
+      const daysSinceUpdate = timeSinceLastUpdate / (1000 * 60 * 60 * 24);
+      uptime = Math.max(0, 100 - (daysSinceUpdate * 10));
+    }
+
+    // Calculate update frequency from last published timestamp
+    // Format as "Every X minutes/hours" or "N/A"
+    let updateFrequency = 'N/A';
+    if (timeSinceRegistration > 0) {
+      // Estimate frequency based on registration time vs last update
+      // This is a rough estimate - real frequency would need multiple data points
+      const daysSinceReg = timeSinceRegistration / (1000 * 60 * 60 * 24);
+      if (daysSinceReg > 0 && isActive) {
+        // If active and registered recently, show estimated frequency
+        if (timeSinceLastUpdate < 60 * 1000) {
+          updateFrequency = 'Every minute';
+        } else if (timeSinceLastUpdate < 5 * 60 * 1000) {
+          updateFrequency = 'Every 5 minutes';
+        } else if (timeSinceLastUpdate < 15 * 60 * 1000) {
+          updateFrequency = 'Every 15 minutes';
+        } else if (timeSinceLastUpdate < 60 * 60 * 1000) {
+          updateFrequency = 'Every hour';
+        } else {
+          updateFrequency = `Every ${Math.round(timeSinceLastUpdate / (60 * 60 * 1000))} hours`;
+        }
+      } else {
+        updateFrequency = 'Inactive';
+      }
+    }
+
+    return {
+      updateFrequency,
+      uptime: Math.round(uptime * 10) / 10,
+      lastPublished: latestData.timestamp,
+      isActive,
+    };
+  } catch (error) {
+    console.error('Error calculating device metrics:', error);
+    return {
+      updateFrequency: 'N/A',
+      uptime: 0,
+      lastPublished: null,
+      isActive: false,
+    };
+  }
+}
+
+/**
  * Read latest data from a device stream
  * @param publisherAddress - The wallet address that published the data (owner's address)
  * @param deviceAddress - The device identifier address (used for dataId generation)
