@@ -42,9 +42,10 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
         // If not found, try to load from registry using device address
         // Device ID format is: device-{address_slice}, so we need to extract the address
         if (!foundDevice) {
-          // Try refreshing marketplace first
+          // Try refreshing marketplace first, then search again
           await refreshMarketplaceDevices();
-          foundDevice = marketplaceDevices.find(d => d.id === id);
+          // After refresh, we need to get updated devices from context
+          // But since state update is async, we'll fall through to direct registry lookup
           
           // If still not found, try loading directly from registry
           // We need to find the device address from the ID
