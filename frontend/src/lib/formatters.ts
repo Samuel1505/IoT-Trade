@@ -6,9 +6,9 @@ export const formatAddress = (address: string): string => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
 
-// Format ETH amount with symbol
+// Format token amount with symbol (STT for Somnia)
 export const formatEthAmount = (amount: number): string => {
-  return `${amount.toFixed(4)} ETH`;
+  return `${amount.toFixed(6)} STT`;
 };
 
 // Format USD amount

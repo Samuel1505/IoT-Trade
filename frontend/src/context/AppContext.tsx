@@ -3,7 +3,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useAccount } from 'wagmi';
 import type { UserDevice, UserSubscription, MarketplaceDevice, DataPoint } from '@/lib/types';
-import { mockStore } from '@/lib/mockData';
 import { loadUserDevices, getUserDeviceAddresses, saveUserDeviceAddress, discoverMarketplaceDevices } from '@/services/deviceRegistry';
 import type { Address } from 'viem';
 
@@ -20,18 +19,16 @@ interface AppContextType {
   updateUserSubscription: (subscriptionId: string, updates: Partial<UserSubscription>) => void;
   cancelUserSubscription: (subscriptionId: string) => void;
   refreshUserDevices: () => Promise<void>;
+  refreshMarketplaceDevices: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Use mock data only in development mode or when no wallet is connected
-const USE_MOCK_DATA = process.env.NODE_ENV === 'development';
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const { address, isConnected } = useAccount();
-  const [userDevices, setUserDevices] = useState<UserDevice[]>(USE_MOCK_DATA ? mockStore.userDevices : []);
-  const [userSubscriptions, setUserSubscriptions] = useState<UserSubscription[]>(USE_MOCK_DATA ? mockStore.userSubscriptions : []);
-  const [marketplaceDevices, setMarketplaceDevices] = useState<MarketplaceDevice[]>(USE_MOCK_DATA ? mockStore.marketplaceDevices : []);
+  const [userDevices, setUserDevices] = useState<UserDevice[]>([]);
+  const [userSubscriptions, setUserSubscriptions] = useState<UserSubscription[]>([]);
+  const [marketplaceDevices, setMarketplaceDevices] = useState<MarketplaceDevice[]>([]);
   const [liveDataPoints] = useState<DataPoint[]>([]);
   const [isLoadingDevices, setIsLoadingDevices] = useState(false);
 
@@ -62,10 +59,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Load marketplace devices from blockchain
   const refreshMarketplaceDevices = async () => {
-    if (USE_MOCK_DATA) {
-      return; // Skip in development mode with mock data
-    }
-
     setIsLoadingDevices(true);
     try {
       const devices = await discoverMarketplaceDevices(50);
@@ -111,9 +104,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     // Refresh marketplace devices to include the newly registered device
-    if (!USE_MOCK_DATA) {
-      refreshMarketplaceDevices();
-    }
+    refreshMarketplaceDevices();
   };
 
   const updateUserDevice = (deviceId: string, updates: Partial<UserDevice>) => {
@@ -166,6 +157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateUserSubscription,
         cancelUserSubscription,
         refreshUserDevices,
+        refreshMarketplaceDevices,
       }}
     >
       {children}

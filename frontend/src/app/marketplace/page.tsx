@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Search, Users, Eye, ShoppingCart } from 'lucide-react';
+import { Search, Users, Eye, ShoppingCart, RefreshCw } from 'lucide-react';
 import { DeviceIcon } from '@/components/shared/DeviceIcon';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useApp } from '@/context/AppContext';
@@ -17,12 +17,27 @@ import { formatEthAmount, formatPercentage } from '@/lib/formatters';
 
 export default function MarketplacePage() {
   const router = useRouter();
-  const { marketplaceDevices, isLoadingDevices } = useApp();
+  const { marketplaceDevices, isLoadingDevices, refreshMarketplaceDevices } = useApp();
   const [search, setSearch] = useState('');
   const [deviceType, setDeviceType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>(SortOption.QUALITY_SCORE);
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [qualityScore, setQualityScore] = useState([0]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Refresh marketplace on mount
+  useEffect(() => {
+    refreshMarketplaceDevices();
+  }, [refreshMarketplaceDevices]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshMarketplaceDevices();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Filter and sort devices
   const filteredDevices = marketplaceDevices
@@ -58,9 +73,20 @@ export default function MarketplacePage() {
       <main className="min-h-screen pt-24 pb-12 px-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="heading-xl mb-2">Marketplace</h1>
-            <p className="body-lg text-gray-600">Browse and subscribe to IoT data streams</p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="heading-xl mb-2">Marketplace</h1>
+              <p className="body-lg text-gray-600">Browse and subscribe to IoT data streams</p>
+            </div>
+            <Button
+              onClick={handleRefresh}
+              disabled={isRefreshing || isLoadingDevices}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
           </div>
 
           {/* Filter Bar */}

@@ -7,7 +7,7 @@
 import type { Address } from 'viem';
 import { readDeviceMetadata } from './deviceService';
 import type { UserDevice, MarketplaceDevice } from '@/lib/types';
-import { DeviceStatus } from '@/lib/enums';
+import { DeviceStatus, DeviceType } from '@/lib/enums';
 
 /**
  * Load user's devices from blockchain
@@ -99,44 +99,40 @@ export function saveUserDeviceAddress(ownerAddress: Address, deviceAddress: Addr
 }
 
 /**
- * Discover marketplace devices
+ * Discover marketplace devices from on-chain registry
  * 
- * Implementation uses:
- * 1. Local discovery list (shared across users via localStorage)
- * 2. On-chain metadata lookup for each device
- * 3. Falls back to empty array if no devices found
- * 
- * In production, you could enhance this with:
- * - An on-chain registry contract
- * - Event querying/indexing
- * - The Graph or similar indexing service
+ * Fetches all registered devices from the DeviceRegistry contract
+ * and converts them to MarketplaceDevice format.
  */
 export async function discoverMarketplaceDevices(
   limit: number = 50
 ): Promise<MarketplaceDevice[]> {
   try {
-    // Get discoverable devices from shared list
-    const { getDiscoverableDevices } = await import('./registryService');
-    const discoverableDevices = getDiscoverableDevices();
+    // Fetch all devices from the on-chain registry
+    const { fetchAllRegistryDevices } = await import('./registryService');
+    const registryDevices = await fetchAllRegistryDevices();
     
-    if (discoverableDevices.length === 0) {
+    if (registryDevices.length === 0) {
       return [];
     }
     
-    // Load metadata for each discoverable device
-    const devices: MarketplaceDevice[] = [];
-    
-    for (const { deviceAddress, ownerAddress } of discoverableDevices.slice(0, limit)) {
-      try {
-        const device = await loadMarketplaceDevice(ownerAddress, deviceAddress);
-        if (device) {
-          devices.push(device);
-        }
-      } catch (error) {
-        console.error(`Error loading device ${deviceAddress}:`, error);
-        // Continue loading other devices
-      }
-    }
+    // Convert RegistryDevice to MarketplaceDevice format
+    const devices: MarketplaceDevice[] = registryDevices
+      .filter(device => device.isActive) // Only show active devices
+      .slice(0, limit)
+      .map(device => ({
+        id: `device-${device.address.slice(2, 10)}`,
+        name: device.name,
+        type: device.deviceType as DeviceType,
+        status: device.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+        qualityScore: 0, // Could calculate from data quality metrics in the future
+        location: device.location,
+        pricePerDataPoint: device.pricePerDataPoint,
+        subscribers: 0, // Would need to track from purchase events or subgraph
+        owner: device.owner,
+        updateFrequency: 'Unknown', // Not stored in registry
+        uptime: 0, // Could calculate from registeredAt timestamp
+      }));
     
     return devices;
   } catch (error) {
@@ -146,29 +142,31 @@ export async function discoverMarketplaceDevices(
 }
 
 /**
- * Load marketplace device by address
+ * Load marketplace device by address from on-chain registry
  */
 export async function loadMarketplaceDevice(
   ownerAddress: Address,
   deviceAddress: Address
 ): Promise<MarketplaceDevice | null> {
   try {
-    const metadata = await readDeviceMetadata(ownerAddress, deviceAddress);
+    const { fetchAllRegistryDevices } = await import('./registryService');
+    const registryDevices = await fetchAllRegistryDevices();
+    const device = registryDevices.find(d => d.address.toLowerCase() === deviceAddress.toLowerCase());
     
-    if (!metadata) {
+    if (!device || !device.isActive) {
       return null;
     }
 
     return {
       id: `device-${deviceAddress.slice(2, 10)}`,
-      name: metadata.deviceName,
-      type: metadata.deviceType,
-      status: DeviceStatus.ONLINE,
-      qualityScore: 0, // Would need to calculate
-      location: metadata.location,
-      pricePerDataPoint: metadata.pricePerDataPoint,
-      subscribers: 0, // Would need to track
-      owner: metadata.ownerAddress,
+      name: device.name,
+      type: device.deviceType as DeviceType,
+      status: device.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+      qualityScore: 0, // Could calculate from data quality metrics
+      location: device.location,
+      pricePerDataPoint: device.pricePerDataPoint,
+      subscribers: 0, // Would need to track from purchase events
+      owner: device.owner,
       updateFrequency: 'Unknown',
       uptime: 0,
     };
