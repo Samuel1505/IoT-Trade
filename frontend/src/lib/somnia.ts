@@ -92,7 +92,14 @@ export function encodeGPSData(data: Omit<GPSData, "entityId" | "nonce">, entityI
  */
 export function decodeGPSData(encodedData: Hex): GPSData {
   const encoder = new SchemaEncoder(GPS_TRACKER_SCHEMA);
-  const decoded = (encoder as any).decode(encodedData);
+  
+  // Check if decode method exists, if not try decodeData
+  const decoder = (encoder as any).decode || (encoder as any).decodeData;
+  if (!decoder || typeof decoder !== 'function') {
+    throw new Error('SchemaEncoder decode method not available. Encoder may not be properly initialized.');
+  }
+  
+  const decoded = decoder.call(encoder, encodedData);
   
   return {
     timestamp: BigInt(decoded.timestamp),
@@ -130,7 +137,14 @@ export function encodeWeatherData(data: Omit<WeatherData, "entityId" | "nonce">,
  */
 export function decodeWeatherData(encodedData: Hex): WeatherData {
   const encoder = new SchemaEncoder(WEATHER_STATION_SCHEMA);
-  const decoded = (encoder as any).decode(encodedData);
+  
+  // Check if decode method exists, if not try decodeData
+  const decoder = (encoder as any).decode || (encoder as any).decodeData;
+  if (!decoder || typeof decoder !== 'function') {
+    throw new Error('SchemaEncoder decode method not available. Encoder may not be properly initialized.');
+  }
+  
+  const decoded = decoder.call(encoder, encodedData);
   
   return {
     timestamp: BigInt(decoded.timestamp),
@@ -168,7 +182,14 @@ export function encodeAirQualityData(data: Omit<AirQualityData, "entityId" | "no
  */
 export function decodeAirQualityData(encodedData: Hex): AirQualityData {
   const encoder = new SchemaEncoder(AIR_QUALITY_MONITOR_SCHEMA);
-  const decoded = (encoder as any).decode(encodedData);
+  
+  // Check if decode method exists, if not try decodeData
+  const decoder = (encoder as any).decode || (encoder as any).decodeData;
+  if (!decoder || typeof decoder !== 'function') {
+    throw new Error('SchemaEncoder decode method not available. Encoder may not be properly initialized.');
+  }
+  
+  const decoded = decoder.call(encoder, encodedData);
   
   return {
     timestamp: BigInt(decoded.timestamp),

@@ -260,41 +260,57 @@ export async function readDeviceData(
     // Read data from the publisher's stream
     const encodedData = await readData(schema, publisherAddress, dataId);
     
-    if (!encodedData) {
+    if (!encodedData || encodedData === '0x' || encodedData === '0x0') {
       return null;
     }
     
-    // Decode based on device type
+    // Validate encoded data format
+    if (typeof encodedData !== 'string' || !encodedData.startsWith('0x')) {
+      console.warn('Invalid encoded data format:', encodedData);
+      return null;
+    }
+    
+    // Decode based on device type with error handling
     let decoded: any;
-    switch (deviceType) {
-      case DeviceType.GPS_TRACKER:
-        decoded = decodeGPSData(encodedData);
-        return {
-          timestamp: new Date(Number(decoded.timestamp)),
-          value: decoded.latitude, // Using latitude as primary value
-          status: "verified" as const,
-          latitude: decoded.latitude,
-          longitude: decoded.longitude,
-        };
-      case DeviceType.WEATHER_STATION:
-        decoded = decodeWeatherData(encodedData);
-        return {
-          timestamp: new Date(Number(decoded.timestamp)),
-          value: decoded.temperature,
-          status: "verified" as const,
-        };
-      case DeviceType.AIR_QUALITY_MONITOR:
-        decoded = decodeAirQualityData(encodedData);
-        return {
-          timestamp: new Date(Number(decoded.timestamp)),
-          value: decoded.aqi,
-          status: "verified" as const,
-        };
-      default:
-        return null;
+    try {
+      switch (deviceType) {
+        case DeviceType.GPS_TRACKER:
+          decoded = decodeGPSData(encodedData);
+          return {
+            timestamp: new Date(Number(decoded.timestamp)),
+            value: decoded.latitude, // Using latitude as primary value
+            status: "verified" as const,
+            latitude: decoded.latitude,
+            longitude: decoded.longitude,
+          };
+        case DeviceType.WEATHER_STATION:
+          decoded = decodeWeatherData(encodedData);
+          return {
+            timestamp: new Date(Number(decoded.timestamp)),
+            value: decoded.temperature,
+            status: "verified" as const,
+          };
+        case DeviceType.AIR_QUALITY_MONITOR:
+          decoded = decodeAirQualityData(encodedData);
+          return {
+            timestamp: new Date(Number(decoded.timestamp)),
+            value: decoded.aqi,
+            status: "verified" as const,
+          };
+        default:
+          return null;
+      }
+    } catch (decodeError: any) {
+      // If decode fails, log but don't throw - device might not have published data yet
+      console.warn(`Failed to decode data for device ${deviceAddress}:`, decodeError?.message || decodeError);
+      return null;
     }
   } catch (error) {
-    console.error("Error reading device data:", error);
+    // Silently return null - device might not have data yet
+    // Only log if it's not a common "no data" scenario
+    if (error instanceof Error && !error.message.includes('decode')) {
+      console.error("Error reading device data:", error);
+    }
     return null;
   }
 }

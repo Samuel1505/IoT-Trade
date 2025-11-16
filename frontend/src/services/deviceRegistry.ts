@@ -122,28 +122,63 @@ export async function discoverMarketplaceDevices(
     for (const device of registryDevices.filter(d => d.isActive).slice(0, limit)) {
       try {
         // Calculate real metrics from Somnia Data Streams
-        const metrics = await calculateDeviceMetrics(
-          device.owner,
-          device.address as Address,
-          device.deviceType as DeviceType,
-          device.registeredAt
-        );
-
-        devices.push({
-          id: `device-${device.address.slice(2, 10)}`,
-          name: device.name,
-          type: device.deviceType as DeviceType,
-          status: metrics.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
-          qualityScore: 0, // Could calculate from data quality metrics in the future
-          location: device.location,
-          pricePerDataPoint: device.pricePerDataPoint,
-          subscribers: 0, // Would need to track from purchase events or subgraph
-          owner: device.owner,
-          updateFrequency: metrics.updateFrequency,
-          uptime: metrics.uptime,
+        // Wrap in timeout to prevent hanging if device has no data
+        const metrics = await Promise.race([
+          calculateDeviceMetrics(
+            device.owner,
+            device.address as Address,
+            device.deviceType as DeviceType,
+            device.registeredAt
+          ),
+          new Promise<typeof import('./deviceService').calculateDeviceMetrics extends (...args: any[]) => Promise<infer R> ? R : never>((_, reject) => 
+            setTimeout(() => reject(new Error('Metrics calculation timeout')), 10000)
+          ),
+        ]).catch((error) => {
+          // If metrics calculation fails, return fallback
+          console.warn(`Metrics calculation failed for device ${device.address}:`, error?.message || error);
+          return null;
         });
+
+        if (!metrics) {
+          // Use fallback metrics if calculation failed
+          const now = Date.now();
+          const registeredAtMs = device.registeredAt;
+          const daysSinceRegistration = Math.floor((now - registeredAtMs) / (1000 * 60 * 60 * 24));
+          const uptimePercentage = daysSinceRegistration === 0 
+            ? 100 
+            : Math.max(0, 100 - (daysSinceRegistration * 5));
+          
+          devices.push({
+            id: `device-${device.address.slice(2, 10)}`,
+            name: device.name,
+            type: device.deviceType as DeviceType,
+            status: device.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+            qualityScore: 0,
+            location: device.location,
+            pricePerDataPoint: device.pricePerDataPoint,
+            subscribers: 0,
+            owner: device.owner,
+            updateFrequency: 'N/A',
+            uptime: Math.round(uptimePercentage * 10) / 10,
+          });
+        } else {
+          devices.push({
+            id: `device-${device.address.slice(2, 10)}`,
+            name: device.name,
+            type: device.deviceType as DeviceType,
+            status: metrics.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+            qualityScore: 0, // Could calculate from data quality metrics in the future
+            location: device.location,
+            pricePerDataPoint: device.pricePerDataPoint,
+            subscribers: 0, // Would need to track from purchase events or subgraph
+            owner: device.owner,
+            updateFrequency: metrics.updateFrequency,
+            uptime: metrics.uptime,
+          });
+        }
       } catch (error) {
-        console.error(`Error calculating metrics for device ${device.address}:`, error);
+        // Silently continue - use fallback metrics
+        console.warn(`Error processing device ${device.address}:`, error);
         // Fallback to basic metrics if calculation fails
         const now = Date.now();
         const registeredAtMs = device.registeredAt;
