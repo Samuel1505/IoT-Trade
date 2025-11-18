@@ -36,7 +36,7 @@ export default function RegisterPage() {
   const { open } = useAppKit();
   const router = useRouter();
   const { addUserDevice } = useApp();
-
+  
   const [serialNumber, setSerialNumber] = useState('');
   const [deviceAddress, setDeviceAddress] = useState<Address | ''>('');
   const [formData, setFormData] = useState({
@@ -144,15 +144,32 @@ export default function RegisterPage() {
       setError('Unable to derive device address. Check the serial number.');
       return;
     }
+    if (!formData.name.trim()) {
+      setError('Device name is required');
+      return;
+    }
+    if (!formData.type) {
+      setError('Device type is required');
+      return;
+    }
+    if (!formData.location.trim()) {
+      setError('Location is required');
+      return;
+    }
+    if (!formData.price.trim()) {
+      setError('Price per data point is required. Please enter a value (e.g., 0.00001 STT)');
+      return;
+    }
 
     setIsRegistering(true);
     setError(null);
+    setSensorDataError(null);
 
     try {
       const walletClient = await getWalletClient();
       const priceFloat = parseFloat(formData.price);
       if (Number.isNaN(priceFloat) || priceFloat <= 0) {
-        throw new Error('Invalid price per data point');
+        throw new Error('Invalid price per data point. Please enter a valid number greater than 0 (e.g., 0.00001)');
       }
       const durationDays = parseInt(formData.subscriptionDurationDays, 10);
       if (Number.isNaN(durationDays) || durationDays <= 0) {
@@ -316,7 +333,7 @@ export default function RegisterPage() {
         uptime: 0,
         lastPublished: new Date(),
       };
-
+      
       if (typeof window !== 'undefined') {
         const key = `user_devices_${address.toLowerCase()}`;
         const existing = localStorage.getItem(key);
@@ -326,16 +343,16 @@ export default function RegisterPage() {
           localStorage.setItem(key, JSON.stringify(addresses));
         }
       }
-
+      
       addUserDevice(newDevice);
-
+      
       setCredentials({
         deviceId,
         apiKey: `ak_${Math.random().toString(36).substr(2, 32)}`,
         apiSecret: `as_${Math.random().toString(36).substr(2, 48)}`,
         txHash: registryTxHash,
       });
-
+      
       setRegistrationComplete(true);
     } catch (err: any) {
       console.error('Error registering device:', err);
@@ -347,7 +364,7 @@ export default function RegisterPage() {
         setSensorDataError(errorMessage);
         setError(null);
       } else {
-        setError(`${getUserFriendlyMessage(appError)}: ${errorMessage}`);
+      setError(`${getUserFriendlyMessage(appError)}: ${errorMessage}`);
         setSensorDataError(null);
       }
     } finally {
@@ -366,7 +383,7 @@ export default function RegisterPage() {
       network: 'Somnia Testnet',
       chainId: 50312,
     };
-
+    
     const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -402,11 +419,11 @@ export default function RegisterPage() {
   }
 
   if (registrationComplete) {
-    return (
-      <>
-        <Header />
-        <main className="min-h-screen pt-24 pb-12 px-6">
-          <div className="max-w-2xl mx-auto">
+  return (
+    <>
+      <Header />
+      <main className="min-h-screen pt-24 pb-12 px-6">
+        <div className="max-w-2xl mx-auto">
             <Card>
               <CardContent className="py-12 px-6">
                 <div className="text-center mb-8">
@@ -431,7 +448,7 @@ export default function RegisterPage() {
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="body-sm text-gray-600 mb-1">Transaction Hash</p>
                     <p className="body-base font-mono text-sm break-all">{credentials.txHash}</p>
-                    <a
+                    <a 
                       href={`https://shannon-explorer.somnia.network/tx/${credentials.txHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -583,24 +600,27 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="body-base font-medium">Location</label>
+                <label className="body-base font-medium">Location *</label>
                 <Input
                   placeholder="San Jose, CA"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  required
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="body-base font-medium">Price per Data Point (STT)</label>
+                <label className="body-base font-medium">Price per Data Point (STT) *</label>
                 <Input
                   type="number"
                   step="0.00001"
-                  min="0"
+                  min="0.00001"
                   placeholder="0.00001"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  required
                 />
+                <p className="text-xs text-gray-500">Required. Minimum: 0.00001 STT per data point</p>
               </div>
 
               <div className="space-y-2">
