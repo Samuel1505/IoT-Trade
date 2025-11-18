@@ -229,25 +229,35 @@ export async function publishData(
 
 /**
  * Read data from a Somnia stream
+ * Returns null if no data exists or if the read times out
  */
 export async function readData(
   schema: string,
   publisherAddress: Address,
-  dataId: Hex
+  dataId: Hex,
+  timeoutMs: number = 1500
 ): Promise<Hex | null> {
   const sdk = createSomniaSDKPublic();
   const schemaId = await sdk.streams.computeSchemaId(schema);
   
   try {
-    const data = await sdk.streams.getByKey(schemaId, publisherAddress, dataId);
+    // Add timeout to prevent hanging when no data exists
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Read timeout')), timeoutMs)
+    );
+    
+    const dataPromise = sdk.streams.getByKey(schemaId, publisherAddress, dataId);
+    const data = await Promise.race([dataPromise, timeoutPromise]);
     return data;
   } catch (err: any) {
     const message: string = err?.message || '';
     // If no data exists yet for this publisher/schema/dataId, SDK may revert with index OOB
+    // Or if read timed out, return null (treat as no data)
     if (
       message.includes('Array index is out of bounds') ||
       message.includes('ContractFunctionRevertedError') ||
-      message.includes('ContractFunctionExecutionError')
+      message.includes('ContractFunctionExecutionError') ||
+      message.includes('Read timeout')
     ) {
       return null;
     }

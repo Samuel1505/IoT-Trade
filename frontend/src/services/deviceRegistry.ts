@@ -146,7 +146,7 @@ export async function discoverMarketplaceDevices(
 
     const devicePromises = activeDevices.map(async (device) => {
       try {
-        // Calculate real metrics from Somnia Data Streams
+        // Calculate real metrics from Somnia Data Streams with shorter timeout
         // Wrap in timeout to prevent hanging if device has no data
         const metricsPromise = calculateDeviceMetrics(
           device.owner,
@@ -156,15 +156,14 @@ export async function discoverMarketplaceDevices(
         );
         
         const timeoutPromise = new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error('Metrics calculation timeout')), 2000)
+          setTimeout(() => reject(new Error('Metrics calculation timeout')), 1500)
         );
         
         const metrics = await Promise.race([
           metricsPromise,
           timeoutPromise,
         ]).catch((error) => {
-          // If metrics calculation fails, return fallback
-          console.warn(`Metrics calculation failed for device ${device.address}:`, error?.message || error);
+          // Silently return null for timeouts - expected when device has no data
           return null;
         });
 
@@ -188,12 +187,16 @@ export async function discoverMarketplaceDevices(
           uptime: metrics.uptime,
         };
       } catch (error) {
-        console.warn(`Error processing device ${device.address}:`, error);
+        // Silently fallback to basic device info
         return buildFallbackDevice(device);
       }
     });
     
-    const devices = await Promise.all(devicePromises);
+    // Use allSettled so slow/failing devices don't block others
+    const results = await Promise.allSettled(devicePromises);
+    const devices = results
+      .map((result) => result.status === 'fulfilled' ? result.value : null)
+      .filter((device): device is MarketplaceDevice => device !== null);
     return devices;
   } catch (error) {
     console.error('Error discovering marketplace devices:', error);
