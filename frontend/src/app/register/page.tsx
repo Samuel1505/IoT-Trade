@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle2, Info, Download, Loader2 } from 'lucide-react';
+import { CheckCircle2, Info, Download, Loader2, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { DeviceType, DeviceStatus } from '@/lib/enums';
 import { useApp } from '@/context/AppContext';
 import { registerDevice, publishGPSData, publishWeatherData, publishAirQualityData } from '@/services/deviceService';
@@ -72,6 +72,7 @@ export default function RegisterPage() {
   });
   const [includeSensorData, setIncludeSensorData] = useState(true);
   const [sensorDataError, setSensorDataError] = useState<string | null>(null);
+  const [showSensorHelp, setShowSensorHelp] = useState(false);
   const [credentials, setCredentials] = useState({
     deviceId: '',
     apiKey: '',
@@ -654,6 +655,76 @@ export default function RegisterPage() {
 
                 {includeSensorData && formData.type && (
                   <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    {/* Help Guide */}
+                    <div className="border border-blue-200 rounded-lg bg-blue-50 p-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowSensorHelp(!showSensorHelp)}
+                        className="flex items-center justify-between w-full text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <HelpCircle className="w-5 h-5 text-primary-blue" />
+                          <span className="body-base font-semibold text-primary-blue">
+                            How do I get sensor data?
+                          </span>
+                        </div>
+                        {showSensorHelp ? (
+                          <ChevronUp className="w-5 h-5 text-primary-blue" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-primary-blue" />
+                        )}
+                      </button>
+                      
+                      {showSensorHelp && (
+                        <div className="mt-4 space-y-3 text-sm text-gray-700">
+                          {formData.type === DeviceType.GPS_TRACKER && (
+                            <>
+                              <p className="font-semibold">📍 GPS Tracker - Where to find readings:</p>
+                              <ul className="list-disc list-inside space-y-1 ml-2">
+                                <li><strong>Smartphone:</strong> Open Google Maps, tap your location dot, see coordinates at the bottom</li>
+                                <li><strong>GPS Device:</strong> Check the device display or companion app</li>
+                                <li><strong>Fitness Tracker:</strong> Check workout details in the app (e.g., Garmin, Fitbit)</li>
+                                <li><strong>Car GPS:</strong> Look at navigation screen - coordinates usually shown in settings</li>
+                              </ul>
+                              <p className="text-xs text-gray-600 mt-2">
+                                💡 <strong>Quick test:</strong> Use Google Maps on your phone - tap your location to see coordinates!
+                              </p>
+                            </>
+                          )}
+                          
+                          {formData.type === DeviceType.WEATHER_STATION && (
+                            <>
+                              <p className="font-semibold">🌤️ Weather Station - Where to find readings:</p>
+                              <ul className="list-disc list-inside space-y-1 ml-2">
+                                <li><strong>Weather App:</strong> Check your phone's weather app (Apple Weather, Weather.com)</li>
+                                <li><strong>Home Weather Station:</strong> Check the device display or companion app</li>
+                                <li><strong>Smart Home:</strong> Check Alexa/Google Home weather, or smart thermostat</li>
+                                <li><strong>Online:</strong> Weather.com or your local weather service</li>
+                              </ul>
+                              <p className="text-xs text-gray-600 mt-2">
+                                💡 <strong>Quick test:</strong> Check your phone's weather app - it shows temperature, humidity, and pressure!
+                              </p>
+                            </>
+                          )}
+                          
+                          {formData.type === DeviceType.AIR_QUALITY_MONITOR && (
+                            <>
+                              <p className="font-semibold">🌬️ Air Quality Monitor - Where to find readings:</p>
+                              <ul className="list-disc list-inside space-y-1 ml-2">
+                                <li><strong>Air Quality App:</strong> BreezoMeter, AirVisual, or PurpleAir app</li>
+                                <li><strong>Smart Air Purifier:</strong> Check device display or companion app (Dyson, Xiaomi)</li>
+                                <li><strong>Online:</strong> AirNow.gov, IQAir.com, or PurpleAir.com</li>
+                                <li><strong>Weather App:</strong> Many weather apps also show AQI</li>
+                              </ul>
+                              <p className="text-xs text-gray-600 mt-2">
+                                💡 <strong>Quick test:</strong> Search "air quality" on Google - it shows your local AQI!
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {formData.type === DeviceType.GPS_TRACKER && (
                       <>
                         <h3 className="body-base font-semibold mb-2">GPS Data</h3>
@@ -668,6 +739,7 @@ export default function RegisterPage() {
                               value={sensorData.latitude}
                               onChange={(e) => setSensorData({ ...sensorData, latitude: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">💡 Find on: Google Maps (tap your location), GPS device display. Range: -90 to 90</p>
                           </div>
                           <div className="space-y-2">
                             <label htmlFor="longitude" className="body-base font-medium">Longitude *</label>
@@ -679,9 +751,10 @@ export default function RegisterPage() {
                               value={sensorData.longitude}
                               onChange={(e) => setSensorData({ ...sensorData, longitude: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">💡 Usually shown with latitude on maps/GPS. Range: -180 to 180</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="altitude">Altitude (m)</label>
+                            <label htmlFor="altitude" className="body-base font-medium">Altitude (m)</label>
                             <Input
                               id="altitude"
                               type="number"
@@ -689,9 +762,10 @@ export default function RegisterPage() {
                               value={sensorData.altitude}
                               onChange={(e) => setSensorData({ ...sensorData, altitude: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">Height above sea level. Optional, default: 0</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="accuracy">Accuracy (m)</label>
+                            <label htmlFor="accuracy" className="body-base font-medium">Accuracy (m)</label>
                             <Input
                               id="accuracy"
                               type="number"
@@ -699,9 +773,10 @@ export default function RegisterPage() {
                               value={sensorData.accuracy}
                               onChange={(e) => setSensorData({ ...sensorData, accuracy: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">GPS accuracy in meters. Optional, default: 10</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="speed">Speed (km/h)</label>
+                            <label htmlFor="speed" className="body-base font-medium">Speed (km/h)</label>
                             <Input
                               id="speed"
                               type="number"
@@ -709,9 +784,10 @@ export default function RegisterPage() {
                               value={sensorData.speed}
                               onChange={(e) => setSensorData({ ...sensorData, speed: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">Current speed. Optional, default: 0</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="heading">Heading (degrees)</label>
+                            <label htmlFor="heading" className="body-base font-medium">Heading (degrees)</label>
                             <Input
                               id="heading"
                               type="number"
@@ -719,6 +795,7 @@ export default function RegisterPage() {
                               value={sensorData.heading}
                               onChange={(e) => setSensorData({ ...sensorData, heading: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">Direction (0-360°). 0=North, 90=East. Optional</p>
                           </div>
                         </div>
                       </>
@@ -729,7 +806,7 @@ export default function RegisterPage() {
                         <h3 className="body-base font-semibold mb-2">Weather Data</h3>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <label htmlFor="temperature">Temperature (°F) *</label>
+                            <label htmlFor="temperature" className="body-base font-medium">Temperature (°F) *</label>
                             <Input
                               id="temperature"
                               type="number"
@@ -738,9 +815,10 @@ export default function RegisterPage() {
                               value={sensorData.temperature}
                               onChange={(e) => setSensorData({ ...sensorData, temperature: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">💡 Check: Phone weather app, weather.com, home thermometer</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="humidity">Humidity (%) *</label>
+                            <label htmlFor="humidity" className="body-base font-medium">Humidity (%) *</label>
                             <Input
                               id="humidity"
                               type="number"
@@ -749,9 +827,10 @@ export default function RegisterPage() {
                               value={sensorData.humidity}
                               onChange={(e) => setSensorData({ ...sensorData, humidity: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">💡 Range: 0-100%. Check weather app for current humidity</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="pressure">Pressure (hPa) *</label>
+                            <label htmlFor="pressure" className="body-base font-medium">Pressure (hPa) *</label>
                             <Input
                               id="pressure"
                               type="number"
@@ -760,9 +839,10 @@ export default function RegisterPage() {
                               value={sensorData.pressure}
                               onChange={(e) => setSensorData({ ...sensorData, pressure: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">💡 Normal: ~1000-1020 hPa. Check weather app details</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="windSpeed">Wind Speed (mph)</label>
+                            <label htmlFor="windSpeed" className="body-base font-medium">Wind Speed (mph)</label>
                             <Input
                               id="windSpeed"
                               type="number"
@@ -771,9 +851,10 @@ export default function RegisterPage() {
                               value={sensorData.windSpeed}
                               onChange={(e) => setSensorData({ ...sensorData, windSpeed: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">Optional. Check weather app for wind conditions</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="windDirection">Wind Direction (degrees)</label>
+                            <label htmlFor="windDirection" className="body-base font-medium">Wind Direction (degrees)</label>
                             <Input
                               id="windDirection"
                               type="number"
@@ -781,9 +862,10 @@ export default function RegisterPage() {
                               value={sensorData.windDirection}
                               onChange={(e) => setSensorData({ ...sensorData, windDirection: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">Optional. 0°=North, 90°=East, 180°=South, 270°=West</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="rainfall">Rainfall (inches/hour)</label>
+                            <label htmlFor="rainfall" className="body-base font-medium">Rainfall (inches/hour)</label>
                             <Input
                               id="rainfall"
                               type="number"
@@ -792,6 +874,7 @@ export default function RegisterPage() {
                               value={sensorData.rainfall}
                               onChange={(e) => setSensorData({ ...sensorData, rainfall: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">Optional. Check weather app for precipitation</p>
                           </div>
                         </div>
                       </>
@@ -802,7 +885,7 @@ export default function RegisterPage() {
                         <h3 className="body-base font-semibold mb-2">Air Quality Data</h3>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <label htmlFor="pm25">PM2.5 (μg/m³) *</label>
+                            <label htmlFor="pm25" className="body-base font-medium">PM2.5 (μg/m³) *</label>
                             <Input
                               id="pm25"
                               type="number"
@@ -810,9 +893,10 @@ export default function RegisterPage() {
                               value={sensorData.pm25}
                               onChange={(e) => setSensorData({ ...sensorData, pm25: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">💡 Find on: AirVisual, PurpleAir app, or Google search "air quality"</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="pm10">PM10 (μg/m³) *</label>
+                            <label htmlFor="pm10" className="body-base font-medium">PM10 (μg/m³) *</label>
                             <Input
                               id="pm10"
                               type="number"
@@ -820,9 +904,10 @@ export default function RegisterPage() {
                               value={sensorData.pm10}
                               onChange={(e) => setSensorData({ ...sensorData, pm10: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">💡 Usually shown with PM2.5 on air quality apps</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="co2">CO₂ (ppm) *</label>
+                            <label htmlFor="co2" className="body-base font-medium">CO₂ (ppm) *</label>
                             <Input
                               id="co2"
                               type="number"
@@ -830,9 +915,10 @@ export default function RegisterPage() {
                               value={sensorData.co2}
                               onChange={(e) => setSensorData({ ...sensorData, co2: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">💡 Normal: 400-1000 ppm. Check indoor air quality monitors</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="no2">NO₂ (ppb) *</label>
+                            <label htmlFor="no2" className="body-base font-medium">NO₂ (ppb) *</label>
                             <Input
                               id="no2"
                               type="number"
@@ -840,9 +926,10 @@ export default function RegisterPage() {
                               value={sensorData.no2}
                               onChange={(e) => setSensorData({ ...sensorData, no2: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">💡 Check air quality apps for detailed pollutant data</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="o3">O₃ (ppb) *</label>
+                            <label htmlFor="o3" className="body-base font-medium">O₃ (ppb) *</label>
                             <Input
                               id="o3"
                               type="number"
@@ -850,9 +937,10 @@ export default function RegisterPage() {
                               value={sensorData.o3}
                               onChange={(e) => setSensorData({ ...sensorData, o3: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">💡 Ozone level. Check AirNow.gov or air quality apps</p>
                           </div>
                           <div className="space-y-2">
-                            <label htmlFor="aqi">AQI *</label>
+                            <label htmlFor="aqi" className="body-base font-medium">AQI *</label>
                             <Input
                               id="aqi"
                               type="number"
@@ -860,6 +948,7 @@ export default function RegisterPage() {
                               value={sensorData.aqi}
                               onChange={(e) => setSensorData({ ...sensorData, aqi: e.target.value })}
                             />
+                            <p className="text-xs text-gray-500">💡 Range: 0-500. Google "air quality" shows your local AQI!</p>
                           </div>
                         </div>
                       </>

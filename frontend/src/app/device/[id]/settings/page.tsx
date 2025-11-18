@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, Save, Send, Loader2, CheckCircle2, Info } from 'lucide-react';
+import { AlertTriangle, Save, Send, Loader2, CheckCircle2, Info, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { DeviceType } from '@/lib/enums';
 import { formatDateTime } from '@/lib/formatters';
@@ -41,6 +41,7 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
   const [isPublishingData, setIsPublishingData] = useState(false);
   const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [showSensorHelp, setShowSensorHelp] = useState(false);
   
   // GPS Data form
   const [gpsData, setGpsData] = useState({
@@ -529,6 +530,42 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
 
                 {device.type === DeviceType.GPS_TRACKER && (
                   <div className="space-y-4">
+                    {/* Help Guide */}
+                    <div className="border border-blue-200 rounded-lg bg-blue-50 p-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowSensorHelp(!showSensorHelp)}
+                        className="flex items-center justify-between w-full text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <HelpCircle className="w-5 h-5 text-primary-blue" />
+                          <span className="body-sm font-semibold text-primary-blue">
+                            Where do I get GPS readings?
+                          </span>
+                        </div>
+                        {showSensorHelp ? (
+                          <ChevronUp className="w-5 h-5 text-primary-blue" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-primary-blue" />
+                        )}
+                      </button>
+                      
+                      {showSensorHelp && (
+                        <div className="mt-4 space-y-3 text-sm text-gray-700">
+                          <p className="font-semibold">📍 GPS Tracker - Where to find readings:</p>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li><strong>Smartphone:</strong> Open Google Maps, tap your location dot, see coordinates at the bottom</li>
+                            <li><strong>GPS Device:</strong> Check the device display or companion app</li>
+                            <li><strong>Fitness Tracker:</strong> Check workout details in the app (e.g., Garmin, Fitbit)</li>
+                            <li><strong>Car GPS:</strong> Look at navigation screen - coordinates usually shown in settings</li>
+                          </ul>
+                          <p className="text-xs text-gray-600 mt-2">
+                            💡 <strong>Quick test:</strong> Use Google Maps on your phone - tap your location to see coordinates!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="body-sm font-medium">Latitude</label>
@@ -609,6 +646,42 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
 
                 {device.type === DeviceType.WEATHER_STATION && (
                   <div className="space-y-4">
+                    {/* Help Guide */}
+                    <div className="border border-blue-200 rounded-lg bg-blue-50 p-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowSensorHelp(!showSensorHelp)}
+                        className="flex items-center justify-between w-full text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <HelpCircle className="w-5 h-5 text-primary-blue" />
+                          <span className="body-sm font-semibold text-primary-blue">
+                            Where do I get weather readings?
+                          </span>
+                        </div>
+                        {showSensorHelp ? (
+                          <ChevronUp className="w-5 h-5 text-primary-blue" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-primary-blue" />
+                        )}
+                      </button>
+                      
+                      {showSensorHelp && (
+                        <div className="mt-4 space-y-3 text-sm text-gray-700">
+                          <p className="font-semibold">🌤️ Weather Station - Where to find readings:</p>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li><strong>Weather App:</strong> Check your phone's weather app (Apple Weather, Weather.com)</li>
+                            <li><strong>Home Weather Station:</strong> Check the device display or companion app</li>
+                            <li><strong>Smart Home:</strong> Check Alexa/Google Home weather, or smart thermostat</li>
+                            <li><strong>Online:</strong> Weather.com or your local weather service</li>
+                          </ul>
+                          <p className="text-xs text-gray-600 mt-2">
+                            💡 <strong>Quick test:</strong> Check your phone's weather app - it shows temperature, humidity, and pressure!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="body-sm font-medium">Temperature (°F)</label>
@@ -692,6 +765,42 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
 
                 {device.type === DeviceType.AIR_QUALITY_MONITOR && (
                   <div className="space-y-4">
+                    {/* Help Guide */}
+                    <div className="border border-blue-200 rounded-lg bg-blue-50 p-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowSensorHelp(!showSensorHelp)}
+                        className="flex items-center justify-between w-full text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <HelpCircle className="w-5 h-5 text-primary-blue" />
+                          <span className="body-sm font-semibold text-primary-blue">
+                            Where do I get air quality readings?
+                          </span>
+                        </div>
+                        {showSensorHelp ? (
+                          <ChevronUp className="w-5 h-5 text-primary-blue" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-primary-blue" />
+                        )}
+                      </button>
+                      
+                      {showSensorHelp && (
+                        <div className="mt-4 space-y-3 text-sm text-gray-700">
+                          <p className="font-semibold">🌬️ Air Quality Monitor - Where to find readings:</p>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li><strong>Air Quality App:</strong> BreezoMeter, AirVisual, or PurpleAir app</li>
+                            <li><strong>Smart Air Purifier:</strong> Check device display or companion app (Dyson, Xiaomi)</li>
+                            <li><strong>Online:</strong> AirNow.gov, IQAir.com, or PurpleAir.com</li>
+                            <li><strong>Weather App:</strong> Many weather apps also show AQI</li>
+                          </ul>
+                          <p className="text-xs text-gray-600 mt-2">
+                            💡 <strong>Quick test:</strong> Search "air quality" on Google - it shows your local AQI!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="body-sm font-medium">PM2.5 (μg/m³)</label>
