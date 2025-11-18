@@ -455,38 +455,55 @@ export default function RegisterPage() {
                 <Separator className="my-6" />
 
                 <div className="space-y-4">
-                  <h3 className="body-base font-semibold">Next Steps: Device Integration</h3>
-                  <p className="body-sm text-gray-600">
-                    To publish data automatically from your device, follow our integration guide:
-                  </p>
-                  <div className="grid grid-cols-1 gap-3">
-                    <a
-                      href="/docs/device-integration"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-4 border border-gray-200 rounded-lg hover:border-primary-blue hover:bg-blue-50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
+                  <h3 className="body-base font-semibold">What's Next?</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="p-4 border border-gray-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <div className="text-2xl">📝</div>
                         <div>
-                          <p className="body-base font-medium">📚 Device Integration Guide</p>
-                          <p className="body-sm text-gray-600 mt-1">Code examples for Python, Node.js, and more</p>
+                          <p className="body-base font-semibold mb-1">Continue Manual Publishing</p>
+                          <p className="body-sm text-gray-600 mb-3">
+                            Keep entering sensor data manually - perfect for beginners!
+                          </p>
+                          <a
+                            href={`/device/${credentials.deviceId}/settings`}
+                            className="body-sm text-primary-blue hover:underline font-medium"
+                          >
+                            Go to Device Settings →
+                          </a>
                         </div>
-                        <Info className="w-5 h-5 text-gray-400" />
                       </div>
-                    </a>
-                    <a
-                      href={`/device/${credentials.deviceId}/settings`}
-                      className="p-4 border border-gray-200 rounded-lg hover:border-primary-blue hover:bg-blue-50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
+                    </div>
+
+                    <div className="p-4 border border-gray-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <div className="text-2xl">⚙️</div>
                         <div>
-                          <p className="body-base font-medium">⚙️ Device Settings</p>
-                          <p className="body-sm text-gray-600 mt-1">Test publishing & view integration status</p>
+                          <p className="body-base font-semibold mb-1">Automate Publishing</p>
+                          <p className="body-sm text-gray-600 mb-3">
+                            For developers: integrate your device to publish automatically
+                          </p>
+                          <a
+                            href="/docs/device-integration"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="body-sm text-primary-blue hover:underline font-medium"
+                          >
+                            View Integration Guide →
+                          </a>
                         </div>
-                        <Info className="w-5 h-5 text-gray-400" />
                       </div>
-                    </a>
+                    </div>
                   </div>
+
+                  <Alert className="bg-gray-50 border-gray-200">
+                    <Info className="h-4 w-4 text-gray-600" />
+                    <AlertDescription className="text-gray-700 text-sm">
+                      <strong>Tip:</strong> Both manual and automatic publishing work great! Choose what fits your needs. 
+                      You can switch anytime in device settings.
+                    </AlertDescription>
+                  </Alert>
                 </div>
 
                 <div className="flex gap-4 mt-6">
@@ -601,22 +618,21 @@ export default function RegisterPage() {
               <Separator />
 
               <div className="space-y-4">
-                <Alert className="bg-blue-50 border-blue-200">
-                  <Info className="h-4 w-4 text-primary-blue" />
+                <Alert className="bg-green-50 border-success-green">
+                  <Info className="h-4 w-4 text-success-green" />
                   <AlertDescription className="text-gray-700">
-                    <strong>For Production:</strong> Your device should publish data automatically using our SDK or API. 
-                    The fields below are optional and mainly for <strong>testing/demo purposes</strong>. 
-                    See <a href="/docs/device-integration" className="text-primary-blue underline font-medium">Device Integration Guide</a> for production setup.
+                    <strong>New to IoT-Trade?</strong> Simply enter your sensor readings below to publish data instantly - no coding required! 
+                    You can always set up automatic publishing later in device settings.
                   </AlertDescription>
                 </Alert>
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <label htmlFor="include-sensor-data" className="body-base font-medium">
-                      Publish Test Sensor Data (Optional)
+                      Publish Initial Sensor Reading
                     </label>
                     <p className="body-sm text-gray-600">
-                      Manually publish first reading for testing/demo (optional)
+                      Enter your sensor data to publish your first reading immediately (recommended)
                     </p>
                   </div>
                   <Switch
@@ -625,6 +641,16 @@ export default function RegisterPage() {
                     onCheckedChange={setIncludeSensorData}
                   />
                 </div>
+
+                {includeSensorData && (
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <Info className="h-4 w-4 text-primary-blue" />
+                    <AlertDescription className="text-gray-700 text-sm">
+                      💡 <strong>For Developers:</strong> Want to automate publishing? After registration, go to device settings to integrate your device with our SDK or API. 
+                      See <a href="/docs/device-integration" className="text-primary-blue underline font-medium">Device Integration Guide</a> for code examples.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {includeSensorData && formData.type && (
                   <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">

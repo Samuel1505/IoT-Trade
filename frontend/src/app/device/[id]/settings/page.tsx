@@ -426,146 +426,41 @@ export default function DeviceSettingsPage({ params }: { params: { id: string } 
               </CardContent>
             </Card>
 
-            {/* Device Integration */}
+            {/* Manual Publishing - For Everyone */}
             <Card>
               <CardHeader>
-                <CardTitle>Device Integration</CardTitle>
-                <CardDescription>Integrate your device to publish data automatically</CardDescription>
+                <CardTitle>Publish Sensor Data</CardTitle>
+                <CardDescription>Enter your sensor readings manually - no coding required!</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Alert className="bg-blue-50 border-blue-200">
-                  <Info className="h-4 w-4 text-primary-blue" />
+                <Alert className="bg-green-50 border-success-green">
+                  <Info className="h-4 w-4 text-success-green" />
                   <AlertDescription className="text-gray-700">
-                    <strong>For Production:</strong> Your device should publish data automatically using our SDK or API. 
-                    Manual publishing below is only for testing.
+                    <strong>Perfect for Beginners:</strong> Simply enter your sensor data below and click "Publish" - that's it! 
+                    This is a completely valid way to use IoT-Trade. No technical knowledge needed.
                   </AlertDescription>
                 </Alert>
 
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                   <div>
-                    <h3 className="body-base font-semibold mb-2">Quick Start</h3>
-                    <p className="body-sm text-gray-600 mb-4">
-                      Use one of these methods to integrate your device:
-                    </p>
-                    <div className="grid grid-cols-1 gap-3 mb-4">
-                      <a
-                        href="/docs/device-integration"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-4 border border-gray-200 rounded-lg hover:border-primary-blue hover:bg-blue-50 transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="body-base font-medium">📚 Full Integration Guide</p>
-                            <p className="body-sm text-gray-600 mt-1">Code examples for Python, Node.js, HTTP API, and more</p>
-                          </div>
-                          <Info className="w-5 h-5 text-gray-400" />
-                        </div>
-                      </a>
-                    </div>
+                    <p className="body-sm text-gray-600 mb-1">Publishing Frequency</p>
+                    <p className="body-base font-semibold">{device.updateFrequency}</p>
                   </div>
-
-                  <Separator />
-
                   <div>
-                    <h3 className="body-base font-semibold mb-2">Device Credentials</h3>
-                    <div className="space-y-2 p-4 bg-gray-50 rounded-lg font-mono text-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Device ID:</span>
-                        <span className="font-semibold">{device.id}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Device Address:</span>
-                        <span className="font-semibold text-xs break-all">{device.deviceAddress}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Owner Address:</span>
-                        <span className="font-semibold text-xs break-all">{device.ownerAddress}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">RPC URL:</span>
-                        <span className="font-semibold text-xs">https://dream-rpc.somnia.network</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Chain ID:</span>
-                        <span className="font-semibold">50312 (Somnia Testnet)</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <h3 className="body-base font-semibold mb-2">Python Example</h3>
-                    <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-                      <pre className="text-green-400 text-xs">
-{`from iot_trade_sdk import IoTTradeClient
-
-client = IoTTradeClient(
-    device_id="${device.id}",
-    api_key="ak_your_api_key",
-    rpc_url="https://dream-rpc.somnia.network"
-)
-
-# Publish data
-client.publish_gps_data(
-    latitude=37.7749,
-    longitude=-122.4194,
-    altitude=10,
-    accuracy=5,
-    speed=0,
-    heading=0
-)`}
-                      </pre>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="body-base font-semibold mb-2">Node.js Example</h3>
-                    <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-                      <pre className="text-green-400 text-xs">
-{`const { IoTTradeClient } = require('@iot-trade/sdk');
-
-const client = new IoTTradeClient({
-  deviceId: '${device.id}',
-  apiKey: 'ak_your_api_key',
-  rpcUrl: 'https://dream-rpc.somnia.network'
-});
-
-await client.publishGPSData({
-  latitude: 37.7749,
-  longitude: -122.4194,
-  altitude: 10,
-  accuracy: 5,
-  speed: 0,
-  heading: 0
-});`}
-                      </pre>
-                    </div>
+                    <p className="body-sm text-gray-600 mb-1">Last Published</p>
+                    <p className="body-base font-semibold">{formatDateTime(device.lastPublished)}</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Publishing (Manual Testing) */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Manual Publishing (Testing Only)</CardTitle>
-                <CardDescription>Test publishing data manually. For production, use device integration above.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="body-base font-semibold mb-1">Publishing Status</p>
-                    <p className="body-sm text-gray-600">
-                      {isPublishing ? 'Device is currently publishing data' : 'Device is paused'}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={isPublishing}
-                    onCheckedChange={handleTogglePublishing}
-                  />
-                </div>
+                <Separator />
+
+                <Alert className="bg-blue-50 border-blue-200">
+                  <Info className="h-4 w-4 text-primary-blue" />
+                  <AlertDescription className="text-gray-700 text-sm">
+                    💡 <strong>Want to automate?</strong> For developers who want automatic publishing from their devices, 
+                    check out the <a href="#device-integration" className="text-primary-blue underline font-medium">Device Integration</a> section below.
+                  </AlertDescription>
+                </Alert>
 
                 <Separator />
 
@@ -579,16 +474,7 @@ await client.publishGPSData({
                     <p className="body-base font-semibold">{formatDateTime(device.lastPublished)}</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Manual Data Publishing */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Publish Data</CardTitle>
-                <CardDescription>Manually publish data to your device stream on Somnia blockchain</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
                 {!address && (
                   <Alert className="bg-yellow-50 border-warning-yellow">
                     <Info className="h-4 w-4 text-warning-yellow" />
@@ -881,6 +767,127 @@ await client.publishGPSData({
                     </Button>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Device Integration - For Developers */}
+            <Card id="device-integration">
+              <CardHeader>
+                <CardTitle>Device Integration (For Developers)</CardTitle>
+                <CardDescription>Automate publishing with our SDK or API</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Alert className="bg-blue-50 border-blue-200">
+                  <Info className="h-4 w-4 text-primary-blue" />
+                  <AlertDescription className="text-gray-700">
+                    This section is for developers who want to integrate their devices to publish data automatically. 
+                    If you're happy with manual publishing above, you can skip this section!
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="body-base font-semibold mb-2">Quick Start</h3>
+                    <p className="body-sm text-gray-600 mb-4">
+                      Use one of these methods to integrate your device:
+                    </p>
+                    <div className="grid grid-cols-1 gap-3 mb-4">
+                      <a
+                        href="/docs/device-integration"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-4 border border-gray-200 rounded-lg hover:border-primary-blue hover:bg-blue-50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="body-base font-medium">📚 Full Integration Guide</p>
+                            <p className="body-sm text-gray-600 mt-1">Code examples for Python, Node.js, HTTP API, and more</p>
+                          </div>
+                          <Info className="w-5 h-5 text-gray-400" />
+                        </div>
+                      </a>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <h3 className="body-base font-semibold mb-2">Device Credentials</h3>
+                    <div className="space-y-2 p-4 bg-gray-50 rounded-lg font-mono text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Device ID:</span>
+                        <span className="font-semibold">{device.id}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Device Address:</span>
+                        <span className="font-semibold text-xs break-all">{device.deviceAddress}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Owner Address:</span>
+                        <span className="font-semibold text-xs break-all">{device.ownerAddress}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">RPC URL:</span>
+                        <span className="font-semibold text-xs">https://dream-rpc.somnia.network</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Chain ID:</span>
+                        <span className="font-semibold">50312 (Somnia Testnet)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <h3 className="body-base font-semibold mb-2">Python Example</h3>
+                    <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                      <pre className="text-green-400 text-xs">
+{`from iot_trade_sdk import IoTTradeClient
+
+client = IoTTradeClient(
+    device_id="${device.id}",
+    api_key="ak_your_api_key",
+    rpc_url="https://dream-rpc.somnia.network"
+)
+
+# Publish data
+client.publish_gps_data(
+    latitude=37.7749,
+    longitude=-122.4194,
+    altitude=10,
+    accuracy=5,
+    speed=0,
+    heading=0
+)`}
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="body-base font-semibold mb-2">Node.js Example</h3>
+                    <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                      <pre className="text-green-400 text-xs">
+{`const { IoTTradeClient } = require('@iot-trade/sdk');
+
+const client = new IoTTradeClient({
+  deviceId: '${device.id}',
+  apiKey: 'ak_your_api_key',
+  rpcUrl: 'https://dream-rpc.somnia.network'
+});
+
+await client.publishGPSData({
+  latitude: 37.7749,
+  longitude: -122.4194,
+  altitude: 10,
+  accuracy: 5,
+  speed: 0,
+  heading: 0
+});`}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
