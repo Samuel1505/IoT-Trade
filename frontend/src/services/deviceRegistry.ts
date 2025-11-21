@@ -111,7 +111,19 @@ export async function discoverMarketplaceDevices(
   try {
     // Fetch all devices from the on-chain registry
     const { fetchAllRegistryDevices } = await import('./registryService');
-    const registryDevices = await fetchAllRegistryDevices();
+    
+    // Add timeout wrapper to prevent hanging
+    const timeoutPromise = new Promise<RegistryDevice[]>((_, reject) => 
+      setTimeout(() => reject(new Error('Discovery timeout')), 15000)
+    );
+    
+    const registryDevices = await Promise.race([
+      fetchAllRegistryDevices(),
+      timeoutPromise,
+    ]).catch((error) => {
+      console.error('Error or timeout fetching registry devices:', error);
+      return [];
+    });
     
     if (registryDevices.length === 0) {
       return [];
