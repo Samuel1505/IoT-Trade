@@ -151,76 +151,74 @@ export default function MarketplacePage() {
                 <p className="body-base text-gray-600">Loading marketplace devices...</p>
               </div>
             </div>
-          ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDevices.map((device) => (
-              <Card key={device.id} className="card-hover">
-                <CardHeader>
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
-                        <DeviceIcon type={device.type} size={24} className="text-primary-blue" />
-                      </div>
-                      <div>
-                        <CardTitle className="body-lg font-semibold">{device.name}</CardTitle>
-                        <p className="body-sm text-gray-600">{device.location}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={device.status} />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Stats */}
-                  <div className="flex items-center justify-between py-3 border-t border-b">
-                    <div className="flex items-center gap-1 text-warning-yellow">
-                      <span>⭐</span>
-                      <span className="body-sm font-medium">{formatPercentage(device.qualityScore)}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <Users className="w-4 h-4" />
-                      <span className="body-sm">{device.subscribers} subscribers</span>
-                    </div>
-                  </div>
-
-                  {/* Price */}
-                  <div>
-                    <p className="body-sm text-gray-600 mb-1">Price per data point</p>
-                    <p className="heading-md text-primary-blue">{formatEthAmount(device.pricePerDataPoint)}</p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => router.push(`/device/${device.id}`)}
-                      className="w-full"
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      Preview
-                    </Button>
-                    <Button
-                      onClick={() => router.push(`/device/${device.id}?tab=subscribe`)}
-                      className="w-full gradient-primary"
-                    >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      Subscribe
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          )}
-
-          {!isLoadingDevices && filteredDevices.length === 0 && (
+          ) : filteredDevices.length === 0 ? (
             <div className="text-center py-12">
               <p className="body-lg text-gray-600">
                 {marketplaceDevices.length === 0 
                   ? 'No devices available in the marketplace yet. Be the first to register a device!'
                   : 'No devices found matching your filters'}
               </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredDevices.map((device) => (
+                <Card key={device.id} className="card-hover">
+                  <CardHeader>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                          <DeviceIcon type={device.type} size={24} className="text-primary-blue" />
+                        </div>
+                        <div>
+                          <CardTitle className="body-lg font-semibold">{device.name}</CardTitle>
+                          <p className="body-sm text-gray-600">{device.location}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={device.status} />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Stats */}
+                    <div className="flex items-center justify-between py-3 border-t border-b">
+                      <div className="flex items-center gap-1 text-warning-yellow">
+                        <span>⭐</span>
+                        <span className="body-sm font-medium">{formatPercentage(device.qualityScore)}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-600">
+                        <Users className="w-4 h-4" />
+                        <span className="body-sm">{device.subscribers} subscribers</span>
+                      </div>
+                    </div>
+
+                    {/* Price */}
+                    <div>
+                      <p className="body-sm text-gray-600 mb-1">Price per data point</p>
+                      <p className="heading-md text-primary-blue">{formatEthAmount(device.pricePerDataPoint)}</p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => router.push(`/device/${device.id}`)}
+                        className="w-full"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        Preview
+                      </Button>
+                      <Button
+                        onClick={() => router.push(`/device/${device.id}?tab=subscribe`)}
+                        className="w-full gradient-primary"
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Subscribe
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </div>

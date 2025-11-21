@@ -62,11 +62,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIsLoadingDevices(true);
     try {
       const devices = await discoverMarketplaceDevices(50);
-      setMarketplaceDevices(devices);
+      setMarketplaceDevices(devices || []);
     } catch (error) {
       console.error('Error loading marketplace devices:', error);
-      // Keep existing devices on error
+      // Set empty array on error to show empty state
+      setMarketplaceDevices([]);
     } finally {
+      // Always reset loading state, even if there's an error
       setIsLoadingDevices(false);
     }
   };
