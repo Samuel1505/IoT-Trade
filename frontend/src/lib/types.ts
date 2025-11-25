@@ -45,6 +45,7 @@ export interface MarketplaceDevice {
   qualityScore: number;
   location: string;
   pricePerDataPoint: number;
+  subscriptionDuration?: number; // Duration in seconds
   subscribers: number;
   owner: string;
   // Added for Streams reads

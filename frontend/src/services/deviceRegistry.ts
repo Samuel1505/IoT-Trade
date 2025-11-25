@@ -249,6 +249,7 @@ export async function discoverMarketplaceDevices(
         qualityScore: 0,
         location: device.location,
         pricePerDataPoint: device.pricePerDataPoint,
+        subscriptionDuration: device.subscriptionDuration,
         subscribers: 0,
         owner: device.owner,
         deviceAddress: device.address,
@@ -293,6 +294,7 @@ export async function discoverMarketplaceDevices(
           qualityScore: 0, // Could calculate from data quality metrics in the future
           location: device.location,
           pricePerDataPoint: device.pricePerDataPoint,
+          subscriptionDuration: device.subscriptionDuration,
           subscribers: 0, // Would need to track from purchase events or subgraph
           owner: device.owner,
           deviceAddress: device.address,
@@ -350,6 +352,7 @@ export async function loadMarketplaceDevice(
       qualityScore: 0, // Could calculate from data quality metrics
       location: device.location,
       pricePerDataPoint: device.pricePerDataPoint,
+      subscriptionDuration: device.subscriptionDuration,
       subscribers: 0, // Would need to track from purchase events
       owner: device.owner,
       deviceAddress: device.address,
