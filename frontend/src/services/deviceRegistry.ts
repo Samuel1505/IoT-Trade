@@ -11,12 +11,114 @@ import type { RegistryDevice } from './registryService';
 import { DeviceStatus, DeviceType } from '@/lib/enums';
 
 /**
- * Load user's devices from blockchain
+ * Load user's devices from blockchain registry
  * 
- * Note: Since Somnia Data Streams doesn't have a built-in registry,
- * we need to track device addresses. For now, we'll use localStorage
- * or later implement a device registry contract.
+ * Fetches devices owned by the user from the on-chain DeviceRegistry contract
+ * and converts them to UserDevice format.
  * 
+ * @param ownerAddress - The wallet address of the device owner
+ */
+export async function loadUserDevicesFromRegistry(
+  ownerAddress: Address
+): Promise<UserDevice[]> {
+  try {
+    // Fetch devices from the on-chain registry
+    const { fetchDevicesByOwner } = await import('./registryService');
+    
+    // Add timeout wrapper to prevent hanging
+    const timeoutPromise = new Promise<RegistryDevice[]>((_, reject) => 
+      setTimeout(() => reject(new Error('Load user devices timeout')), 15000)
+    );
+    
+    const registryDevices = await Promise.race([
+      fetchDevicesByOwner(ownerAddress),
+      timeoutPromise,
+    ]).catch((error) => {
+      console.error('Error or timeout fetching user devices from registry:', error);
+      return [];
+    });
+    
+    if (registryDevices.length === 0) {
+      return [];
+    }
+
+    const buildUserDevice = (device: RegistryDevice): UserDevice => {
+      return {
+        id: `device-${device.address.slice(2, 10)}`,
+        name: device.name,
+        type: device.deviceType as DeviceType,
+        status: device.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+        qualityScore: 0,
+        location: device.location,
+        totalDataPoints: 0,
+        totalEarnings: 0,
+        totalEarningsUsd: 0,
+        activeSubscribers: 0,
+        deviceAddress: device.address,
+        ownerAddress: device.owner,
+        pricePerDataPoint: device.pricePerDataPoint,
+        updateFrequency: 'Unknown',
+        uptime: 0,
+        lastPublished: new Date(device.registeredAt),
+      };
+    };
+
+    const devicePromises = registryDevices.map(async (device) => {
+      try {
+        // Calculate real metrics from Somnia Data Streams with shorter timeout
+        const metricsPromise = calculateDeviceMetrics(
+          device.owner,
+          device.address as Address,
+          device.deviceType as DeviceType,
+          device.registeredAt
+        );
+        
+        const timeoutPromise = new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('Metrics calculation timeout')), 1500)
+        );
+        
+        const metrics = await Promise.race([
+          metricsPromise,
+          timeoutPromise,
+        ]).catch((error) => {
+          // Silently return null for timeouts - expected when device has no data
+          return null;
+        });
+
+        const userDevice = buildUserDevice(device);
+        
+        if (metrics) {
+          userDevice.status = metrics.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE;
+          userDevice.updateFrequency = metrics.updateFrequency;
+          userDevice.uptime = metrics.uptime;
+          if (metrics.lastPublished) {
+            userDevice.lastPublished = metrics.lastPublished;
+          }
+        }
+
+        return userDevice;
+      } catch (error) {
+        // Fallback to basic device info
+        return buildUserDevice(device);
+      }
+    });
+    
+    // Use allSettled so slow/failing devices don't block others
+    const results = await Promise.allSettled(devicePromises);
+    const devices = results
+      .map((result) => result.status === 'fulfilled' ? result.value : null)
+      .filter((device): device is UserDevice => device !== null);
+    return devices;
+  } catch (error) {
+    console.error('Error loading user devices from registry:', error);
+    return [];
+  }
+}
+
+/**
+ * Load user's devices from blockchain (legacy - uses localStorage addresses)
+ * 
+ * @deprecated Use loadUserDevicesFromRegistry instead
  * @param ownerAddress - The wallet address of the device owner
  * @param deviceAddresses - Array of device addresses to load metadata for
  */

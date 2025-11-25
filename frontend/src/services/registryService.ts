@@ -117,27 +117,53 @@ export async function fetchAllRegistryDevices(): Promise<RegistryDevice[]> {
 }
 
 export async function fetchDevicesByOwner(owner: Address): Promise<RegistryDevice[]> {
-  const contractAddress = requireContractAddress();
-  const addresses = (await publicClient.readContract({
-    address: contractAddress,
-    abi: deviceRegistryAbi,
-    functionName: 'getDevicesByOwner',
-    args: [owner],
-  })) as Address[];
+  try {
+    const contractAddress = requireContractAddress();
+    
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Fetch devices by owner timeout')), 10000)
+    );
+    
+    const addressesPromise = publicClient.readContract({
+      address: contractAddress,
+      abi: deviceRegistryAbi,
+      functionName: 'getDevicesByOwner',
+      args: [owner],
+    }) as Promise<Address[]>;
+    
+    const addresses = await Promise.race([addressesPromise, timeoutPromise]);
 
-  const devices = await Promise.all(
-    addresses.map(async (deviceAddress) => {
-      const device = (await publicClient.readContract({
-        address: contractAddress,
-        abi: deviceRegistryAbi,
-        functionName: 'getDevice',
-        args: [deviceAddress],
-      })) as ContractDevice;
-      return toRegistryDevice(deviceAddress, device);
-    }),
-  );
+    // If no addresses, return empty array immediately
+    if (!addresses || addresses.length === 0) {
+      return [];
+    }
 
-  return devices;
+    const devices = await Promise.allSettled(
+      addresses.map(async (deviceAddress) => {
+        try {
+          const device = (await publicClient.readContract({
+            address: contractAddress,
+            abi: deviceRegistryAbi,
+            functionName: 'getDevice',
+            args: [deviceAddress],
+          })) as ContractDevice;
+          return toRegistryDevice(deviceAddress, device);
+        } catch (error) {
+          console.error(`Error fetching device ${deviceAddress}:`, error);
+          return null;
+        }
+      }),
+    );
+
+    return devices
+      .map((result) => result.status === 'fulfilled' ? result.value : null)
+      .filter((device): device is RegistryDevice => device !== null);
+  } catch (error) {
+    // If contract address is missing or RPC call fails, return empty array
+    console.error('Error fetching devices by owner:', error);
+    return [];
+  }
 }
 
 export async function registerDeviceOnChain(

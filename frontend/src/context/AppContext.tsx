@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useAccount } from 'wagmi';
 import type { UserDevice, UserSubscription, MarketplaceDevice, DataPoint } from '@/lib/types';
-import { loadUserDevices, getUserDeviceAddresses, saveUserDeviceAddress, discoverMarketplaceDevices } from '@/services/deviceRegistry';
+import { loadUserDevicesFromRegistry, getUserDeviceAddresses, saveUserDeviceAddress, discoverMarketplaceDevices } from '@/services/deviceRegistry';
 import type { Address } from 'viem';
 
 interface AppContextType {
@@ -41,17 +41,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setIsLoadingDevices(true);
     try {
-      const deviceAddresses = getUserDeviceAddresses(address);
-      
-      if (deviceAddresses.length > 0) {
-        const devices = await loadUserDevices(address, deviceAddresses);
-        setUserDevices(devices);
-      } else {
-        setUserDevices([]);
-      }
+      // Load devices from on-chain registry (primary method)
+      const devices = await loadUserDevicesFromRegistry(address);
+      setUserDevices(devices);
     } catch (error) {
       console.error('Error loading user devices:', error);
       // Keep existing devices on error
+      setUserDevices([]);
     } finally {
       setIsLoadingDevices(false);
     }
