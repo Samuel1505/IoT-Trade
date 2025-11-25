@@ -345,3 +345,20 @@ export async function isDeviceRegistered(deviceAddress: Address): Promise<boolea
     args: [deviceAddress],
   })) as boolean;
 }
+
+export async function getDeviceInfo(deviceAddress: Address): Promise<RegistryDevice | null> {
+  try {
+    const contractAddress = requireContractAddress();
+    const device = (await publicClient.readContract({
+      address: contractAddress,
+      abi: deviceRegistryAbi,
+      functionName: 'getDevice',
+      args: [deviceAddress],
+    })) as ContractDevice;
+    
+    return toRegistryDevice(deviceAddress, device);
+  } catch (error) {
+    console.error('Error fetching device info:', error);
+    return null;
+  }
+}
