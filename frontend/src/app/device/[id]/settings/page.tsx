@@ -52,43 +52,42 @@ export default function DeviceSettingsPage({ params }: { params: Promise<{ id: s
         
         // If not found, try loading directly from registry
         if (!foundDevice && address) {
-            const { fetchDevicesByOwner } = await import('@/services/registryService');
-            const { calculateDeviceMetrics } = await import('@/services/deviceService');
-            const registryDevices = await fetchDevicesByOwner(address);
+          const { fetchDevicesByOwner } = await import('@/services/registryService');
+          const { calculateDeviceMetrics } = await import('@/services/deviceService');
+          const registryDevices = await fetchDevicesByOwner(address);
+          
+          // Find device by matching ID
+          const registryDevice = registryDevices.find(d => {
+            const deviceId = `device-${d.address.slice(2, 10)}`;
+            return deviceId === id;
+          });
+          
+          if (registryDevice) {
+            const metrics = await calculateDeviceMetrics(
+              registryDevice.owner,
+              registryDevice.address as Address,
+              registryDevice.deviceType as DeviceType,
+              registryDevice.registeredAt
+            );
             
-            // Find device by matching ID
-            const registryDevice = registryDevices.find(d => {
-              const deviceId = `device-${d.address.slice(2, 10)}`;
-              return deviceId === id;
-            });
-            
-            if (registryDevice) {
-              const metrics = await calculateDeviceMetrics(
-                registryDevice.owner,
-                registryDevice.address as Address,
-                registryDevice.deviceType as DeviceType,
-                registryDevice.registeredAt
-              );
-              
-              foundDevice = {
-                id: `device-${registryDevice.address.slice(2, 10)}`,
-                name: registryDevice.name,
-                type: registryDevice.deviceType as DeviceType,
-                status: metrics.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
-                qualityScore: 0,
-                location: registryDevice.location,
-                totalDataPoints: 0,
-                totalEarnings: 0,
-                totalEarningsUsd: 0,
-                activeSubscribers: 0,
-                deviceAddress: registryDevice.address,
-                ownerAddress: registryDevice.owner,
-                pricePerDataPoint: registryDevice.pricePerDataPoint,
-                updateFrequency: metrics.updateFrequency,
-                uptime: metrics.uptime,
-                lastPublished: metrics.lastPublished || new Date(registryDevice.registeredAt),
-              };
-            }
+            foundDevice = {
+              id: `device-${registryDevice.address.slice(2, 10)}`,
+              name: registryDevice.name,
+              type: registryDevice.deviceType as DeviceType,
+              status: metrics.isActive ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+              qualityScore: 0,
+              location: registryDevice.location,
+              totalDataPoints: 0,
+              totalEarnings: 0,
+              totalEarningsUsd: 0,
+              activeSubscribers: 0,
+              deviceAddress: registryDevice.address,
+              ownerAddress: registryDevice.owner,
+              pricePerDataPoint: registryDevice.pricePerDataPoint,
+              updateFrequency: metrics.updateFrequency,
+              uptime: metrics.uptime,
+              lastPublished: metrics.lastPublished || new Date(registryDevice.registeredAt),
+            };
           }
         }
         

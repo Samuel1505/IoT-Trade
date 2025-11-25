@@ -81,6 +81,8 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
                 pricePerDataPoint: registryDevice.pricePerDataPoint,
                 subscribers: 0,
                 owner: registryDevice.owner,
+                deviceAddress: registryDevice.address,
+                ownerAddress: registryDevice.owner,
                 updateFrequency: metrics.updateFrequency,
                 uptime: metrics.uptime,
               };
