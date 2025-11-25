@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { useAccount } from 'wagmi';
 import type { UserDevice, UserSubscription, MarketplaceDevice, DataPoint } from '@/lib/types';
 import { loadUserDevicesFromRegistry, getUserDeviceAddresses, saveUserDeviceAddress, discoverMarketplaceDevices } from '@/services/deviceRegistry';
+import { loadUserSubscriptions } from '@/services/subscriptionService';
 import type { Address } from 'viem';
 
 interface AppContextType {
@@ -20,6 +21,7 @@ interface AppContextType {
   cancelUserSubscription: (subscriptionId: string) => void;
   refreshUserDevices: () => Promise<void>;
   refreshMarketplaceDevices: () => Promise<void>;
+  refreshUserSubscriptions: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -69,15 +71,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Load devices when wallet connects
+  // Load user subscriptions from blockchain
+  const refreshUserSubscriptions = useCallback(async () => {
+    if (!address || !isConnected) {
+      setUserSubscriptions([]);
+      return;
+    }
+
+    try {
+      const subscriptions = await loadUserSubscriptions(address);
+      setUserSubscriptions(subscriptions);
+    } catch (error) {
+      console.error('Error loading user subscriptions:', error);
+      // Keep existing subscriptions on error
+    }
+  }, [address, isConnected]);
+
+  // Load devices and subscriptions when wallet connects
   useEffect(() => {
     if (isConnected && address) {
       refreshUserDevices();
+      refreshUserSubscriptions();
     } else {
       setUserDevices([]);
       setUserSubscriptions([]);
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, refreshUserDevices, refreshUserSubscriptions]);
 
   // Load marketplace devices on mount
   useEffect(() => {
@@ -156,6 +175,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         cancelUserSubscription,
         refreshUserDevices,
         refreshMarketplaceDevices,
+        refreshUserSubscriptions,
       }}
     >
       {children}
