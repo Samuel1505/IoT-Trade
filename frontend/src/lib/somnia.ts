@@ -248,16 +248,53 @@ export async function readData(
     
     const dataPromise = sdk.streams.getByKey(schemaId, publisherAddress, dataId);
     const data = await Promise.race([dataPromise, timeoutPromise]);
-    return data;
+    
+    // Validate and normalize the returned data
+    if (!data) {
+      return null;
+    }
+    
+    // If data is already a hex string, validate it
+    if (typeof data === 'string') {
+      if (data.startsWith('0x')) {
+        // Validate it's a proper hex string (not empty or just '0x')
+        if (data === '0x' || data === '0x0') {
+          return null;
+        }
+        return data as Hex;
+      } else {
+        // Not a valid hex string format
+        console.warn(`Invalid hex format returned from readData: ${data.substring(0, 50)}`);
+        return null;
+      }
+    }
+    
+    // If data is bytes/ArrayBuffer, convert to hex
+    if (data instanceof Uint8Array || data instanceof ArrayBuffer) {
+      return toHex(data);
+    }
+    
+    // For other types, try to convert to hex if possible
+    return toHex(data as any);
   } catch (err: any) {
     const message: string = err?.message || '';
+    const statusCode = err?.status || err?.statusCode || err?.code;
+    
     // If no data exists yet for this publisher/schema/dataId, SDK may revert with index OOB
     // Or if read timed out, return null (treat as no data)
+    // Also catch DataView/ArrayBuffer errors which indicate invalid data format
+    // HTTP 400 errors typically indicate invalid request (e.g., data doesn't exist)
     if (
+      statusCode === 400 ||
       message.includes('Array index is out of bounds') ||
       message.includes('ContractFunctionRevertedError') ||
       message.includes('ContractFunctionExecutionError') ||
-      message.includes('Read timeout')
+      message.includes('Read timeout') ||
+      message.includes('ArrayBuffer') ||
+      message.includes('DataView') ||
+      message.includes('First argument to DataView constructor') ||
+      message.includes('400') ||
+      message.includes('Bad Request')
     ) {
       return null;
     }

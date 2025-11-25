@@ -244,17 +244,34 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
   // Mount chart only when chart tab is active and container is ready
   useEffect(() => {
     if (viewMode === ViewMode.CHART && chartContainerRef.current) {
+      let retryTimer: NodeJS.Timeout | null = null;
+      
       // Small delay to ensure container has dimensions
       const timer = setTimeout(() => {
         if (chartContainerRef.current) {
           const rect = chartContainerRef.current.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
+          // Ensure container has valid dimensions (minimum 384px height, 400px width)
+          if (rect.width >= 400 && rect.height >= 384) {
             setChartMounted(true);
+          } else {
+            // If dimensions are invalid, retry after a short delay
+            retryTimer = setTimeout(() => {
+              if (chartContainerRef.current) {
+                const retryRect = chartContainerRef.current.getBoundingClientRect();
+                if (retryRect.width >= 400 && retryRect.height >= 384) {
+                  setChartMounted(true);
+                }
+              }
+            }, 200);
           }
         }
       }, 100);
+      
       return () => {
         clearTimeout(timer);
+        if (retryTimer) {
+          clearTimeout(retryTimer);
+        }
         setChartMounted(false);
       };
     } else {
@@ -500,11 +517,11 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
                       <div 
                         ref={chartContainerRef}
                         className="h-96 w-full"
-                        style={{ minWidth: 0, minHeight: 384 }}
+                        style={{ minWidth: 400, minHeight: 384 }}
                       >
                         {chartMounted && chartData.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartData}>
+                          <ResponsiveContainer width="100%" height="100%" minHeight={384}>
+                            <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                               <XAxis 
                                 dataKey="time" 

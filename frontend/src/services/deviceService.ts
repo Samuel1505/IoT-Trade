@@ -356,22 +356,79 @@ export async function readDeviceMetadata(
       return null;
     }
     
+    // Validate that encodedData is a valid hex string or can be converted to one
+    let validHexData: Hex;
+    
+    if (typeof encodedData === 'string') {
+      // Check if it's already a hex string (starts with 0x)
+      if (encodedData.startsWith('0x')) {
+        // Validate it's not empty or just '0x'
+        if (encodedData === '0x' || encodedData === '0x0' || encodedData.length < 4) {
+          return null;
+        }
+        validHexData = encodedData as Hex;
+      } else {
+        // Not a valid hex string
+        console.warn(`Invalid hex data format for device ${deviceAddress}: ${encodedData}`);
+        return null;
+      }
+    } else if (encodedData instanceof Uint8Array || encodedData instanceof ArrayBuffer) {
+      // Convert bytes/ArrayBuffer to hex
+      validHexData = toHex(encodedData);
+    } else {
+      // Unknown format, try to handle if it's already decoded
+      if (encodedData && typeof encodedData === 'object' && 'deviceName' in encodedData) {
+        // Already decoded, return directly
+        return {
+          deviceName: encodedData.deviceName,
+          deviceType: encodedData.deviceType as DeviceType,
+          location: encodedData.location,
+          pricePerDataPoint: Number(encodedData.pricePerDataPoint) / 1e18,
+          ownerAddress: encodedData.ownerAddress as Address,
+        };
+      }
+      console.warn(`Unexpected data format for device ${deviceAddress}:`, typeof encodedData);
+      return null;
+    }
+    
     const encoder = new SchemaEncoder(DEVICE_METADATA_SCHEMA);
     const decoder = (encoder as any).decode || (encoder as any).decodeData;
     if (!decoder || typeof decoder !== 'function') {
       throw new Error('SchemaEncoder decode method not available. Encoder may not be properly initialized.');
     }
-    const decoded = decoder.call(encoder, encodedData);
+    
+    // Try to decode with error handling
+    let decoded: any;
+    try {
+      decoded = decoder.call(encoder, validHexData);
+    } catch (decodeError: any) {
+      // If decode fails, check if it's a DataView/ArrayBuffer issue
+      if (decodeError?.message?.includes('ArrayBuffer') || decodeError?.message?.includes('DataView')) {
+        console.warn(`Failed to decode metadata for device ${deviceAddress}: Invalid data format`);
+        return null;
+      }
+      throw decodeError;
+    }
+    
+    // Validate decoded data has required fields
+    if (!decoded || !decoded.deviceName || !decoded.deviceType) {
+      console.warn(`Decoded metadata missing required fields for device ${deviceAddress}`);
+      return null;
+    }
     
     return {
       deviceName: decoded.deviceName,
       deviceType: decoded.deviceType as DeviceType,
-      location: decoded.location,
-      pricePerDataPoint: Number(decoded.pricePerDataPoint) / 1e18,
-      ownerAddress: decoded.ownerAddress as Address,
+      location: decoded.location || '',
+      pricePerDataPoint: Number(decoded.pricePerDataPoint || 0) / 1e18,
+      ownerAddress: (decoded.ownerAddress || publisherAddress) as Address,
     };
   } catch (error) {
-    console.error("Error reading device metadata:", error);
+    // Don't log DataView/ArrayBuffer errors as errors - they're expected when data doesn't exist
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (!errorMessage.includes('ArrayBuffer') && !errorMessage.includes('DataView')) {
+      console.error("Error reading device metadata:", error);
+    }
     return null;
   }
 }
