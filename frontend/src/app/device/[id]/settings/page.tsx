@@ -233,11 +233,40 @@ export default function DeviceSettingsPage({ params }: { params: Promise<{ id: s
     alert('Settings saved successfully!');
   };
 
-  const handleTogglePublishing = (checked: boolean) => {
-    setIsPublishing(checked);
-    updateUserDevice(device.id, {
-      status: checked ? 'ONLINE' : 'OFFLINE'
-    });
+  const handleTogglePublishing = async (checked: boolean) => {
+    if (!address || !device) {
+      alert('Wallet not connected or device not available');
+      return;
+    }
+
+    setIsPublishing(true); // Set loading state
+
+    try {
+      const walletClient = await getWalletClient();
+      const newStatus = checked ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE;
+      
+      // Update on-chain status
+      const { setDeviceActiveOnChain } = await import('@/services/registryService');
+      await setDeviceActiveOnChain(
+        walletClient,
+        device.deviceAddress as Address,
+        checked
+      );
+
+      // Update local state
+      updateUserDevice(device.id, {
+        status: newStatus
+      });
+
+      setIsPublishing(checked);
+      alert(`Device ${checked ? 'activated' : 'paused'} successfully!`);
+    } catch (error: any) {
+      console.error('Error toggling device status:', error);
+      const appError = parseError(error);
+      alert(`${getUserFriendlyMessage(appError)}: ${appError.details || appError.message || 'Failed to update device status'}`);
+    } finally {
+      setIsPublishing(device.status === DeviceStatus.ONLINE);
+    }
   };
 
   const handleDeactivate = () => {

@@ -1,19 +1,86 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAccount } from 'wagmi';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, TrendingUp, Users, Database, Settings, Eye, Pause } from 'lucide-react';
+import { Plus, TrendingUp, Users, Database, Settings, Eye, Pause, Play, Loader2 } from 'lucide-react';
 import { DeviceIcon } from '@/components/shared/DeviceIcon';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { useApp } from '@/context/AppContext';
 import { formatEthAmount, formatUsdAmount, formatPercentage, formatCount } from '@/lib/formatters';
+import { DeviceStatus } from '@/lib/enums';
+import { setDeviceActiveOnChain } from '@/services/registryService';
+import { createWalletClient, custom } from 'viem';
+import { somniaTestnet } from '@/config/wagmi';
+import type { Address } from 'viem';
+import { parseError, getUserFriendlyMessage } from '@/lib/errors';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { userDevices, isLoadingDevices } = useApp();
+  const { address } = useAccount();
+  const { userDevices, isLoadingDevices, updateUserDevice, refreshUserDevices } = useApp();
+  const [togglingDevices, setTogglingDevices] = useState<Set<string>>(new Set());
+
+  const getWalletClient = async () => {
+    if (!address) {
+      throw new Error('Wallet not connected');
+    }
+    if (typeof window === 'undefined' || !(window as any).ethereum) {
+      throw new Error('Wallet not available');
+    }
+    const provider = (window as any).ethereum;
+    
+    return createWalletClient({
+      account: address as Address,
+      chain: somniaTestnet,
+      transport: custom(provider),
+    });
+  };
+
+  const handleToggleDeviceStatus = async (device: typeof userDevices[0]) => {
+    if (!address) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    const isCurrentlyActive = device.status === DeviceStatus.ONLINE;
+    const newStatus = isCurrentlyActive ? DeviceStatus.OFFLINE : DeviceStatus.ONLINE;
+    
+    setTogglingDevices(prev => new Set(prev).add(device.id));
+
+    try {
+      const walletClient = await getWalletClient();
+      
+      // Update on-chain status
+      await setDeviceActiveOnChain(
+        walletClient,
+        device.deviceAddress as Address,
+        newStatus === DeviceStatus.ONLINE
+      );
+
+      // Update local state optimistically
+      updateUserDevice(device.id, {
+        status: newStatus
+      });
+
+      // Refresh devices to ensure sync
+      await refreshUserDevices();
+    } catch (error: any) {
+      console.error('Error toggling device status:', error);
+      const appError = parseError(error);
+      alert(`${getUserFriendlyMessage(appError)}: ${appError.details || appError.message || 'Failed to update device status'}`);
+    } finally {
+      setTogglingDevices(prev => {
+        const next = new Set(prev);
+        next.delete(device.id);
+        return next;
+      });
+    }
+  };
 
   return (
     <>
@@ -120,9 +187,25 @@ export default function DashboardPage() {
                         variant="outline"
                         size="sm"
                         className="w-full"
+                        onClick={() => handleToggleDeviceStatus(device)}
+                        disabled={togglingDevices.has(device.id)}
                       >
-                        <Pause className="w-3 h-3 mr-1" />
-                        Pause
+                        {togglingDevices.has(device.id) ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            {device.status === DeviceStatus.ONLINE ? 'Pausing...' : 'Resuming...'}
+                          </>
+                        ) : device.status === DeviceStatus.ONLINE ? (
+                          <>
+                            <Pause className="w-3 h-3 mr-1" />
+                            Pause
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-3 h-3 mr-1" />
+                            Play
+                          </>
+                        )}
                       </Button>
                     </div>
                   </CardContent>
