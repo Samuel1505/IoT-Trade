@@ -4,22 +4,6 @@
 
 **IoT-Trade** is a Web3 platform that enables IoT device owners to monetize their sensor data by selling access to real-time data streams. Subscribers can discover devices, purchase subscriptions, and access live sensor data (GPS tracking, weather stations, air quality monitors) directly from the blockchain.
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Smart Contracts](#smart-contracts)
-- [Frontend](#frontend)
-- [Device Integration](#device-integration)
-- [Development](#development)
-- [Integration Roadmap](#integration-roadmap)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-
 ## Overview
 
 IoT-Trade connects IoT device owners with data consumers in a decentralized marketplace. The platform leverages **Somnia Data Streams** for on-chain data storage and **smart contracts** for device registry, subscriptions, and payment processing.
