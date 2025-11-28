@@ -356,38 +356,20 @@ export async function readDeviceMetadata(
       return null;
     }
     
-    // Validate that encodedData is a valid hex string or can be converted to one
+    // Validate that encodedData is a valid hex string
+    // readData already normalizes to Hex | null, so encodedData is always a string here
     let validHexData: Hex;
     
-    if (typeof encodedData === 'string') {
-      // Check if it's already a hex string (starts with 0x)
-      if (encodedData.startsWith('0x')) {
-        // Validate it's not empty or just '0x'
-        if (encodedData === '0x' || encodedData === '0x0' || encodedData.length < 4) {
-          return null;
-        }
-        validHexData = encodedData as Hex;
-      } else {
-        // Not a valid hex string
-        console.warn(`Invalid hex data format for device ${deviceAddress}: ${encodedData}`);
+    // Check if it's a valid hex string (starts with 0x)
+    if (encodedData.startsWith('0x')) {
+      // Validate it's not empty or just '0x'
+      if (encodedData === '0x' || encodedData === '0x0' || encodedData.length < 4) {
         return null;
       }
-    } else if (encodedData instanceof Uint8Array || encodedData instanceof ArrayBuffer) {
-      // Convert bytes/ArrayBuffer to hex
-      validHexData = toHex(encodedData);
+      validHexData = encodedData;
     } else {
-      // Unknown format, try to handle if it's already decoded
-      if (encodedData && typeof encodedData === 'object' && 'deviceName' in encodedData) {
-        // Already decoded, return directly
-        return {
-          deviceName: encodedData.deviceName,
-          deviceType: encodedData.deviceType as DeviceType,
-          location: encodedData.location,
-          pricePerDataPoint: Number(encodedData.pricePerDataPoint) / 1e18,
-          ownerAddress: encodedData.ownerAddress as Address,
-        };
-      }
-      console.warn(`Unexpected data format for device ${deviceAddress}:`, typeof encodedData);
+      // Not a valid hex string
+      console.warn(`Invalid hex data format for device ${deviceAddress}: ${encodedData}`);
       return null;
     }
     

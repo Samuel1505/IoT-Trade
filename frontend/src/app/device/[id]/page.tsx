@@ -18,8 +18,8 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useApp } from '@/context/AppContext';
 import { formatAddress, formatEthAmount, formatUsdAmount, formatDateTime, formatPercentage } from '@/lib/formatters';
 import { mockQuery } from '@/lib/mockData';
-import { SubscriptionDuration, DeviceType, DeviceStatus } from '@/lib/enums';
-import type { MarketplaceDevice } from '@/lib/types';
+import { SubscriptionDuration, DeviceType, DeviceStatus, SubscriptionStatus } from '@/lib/enums';
+import type { MarketplaceDevice, UserSubscription } from '@/lib/types';
 import type { Address } from 'viem';
 import { purchaseDeviceAccess, getAccessExpiry, getDeviceInfo } from '@/services/registryService';
 
@@ -256,28 +256,28 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
       const daysRemaining = Math.ceil((expiryTimestamp - now) / (1000 * 60 * 60 * 24));
       
       // Create subscription from blockchain data
-    const newSubscription = {
+      const newSubscription: UserSubscription = {
         id: `sub-${device.id}-${now}`,
-      deviceId: device.id,
-      deviceName: device.name,
-      deviceType: device.type,
-      deviceOwner: device.owner,
-      status: 'Active' as const,
+        deviceId: device.id,
+        deviceName: device.name,
+        deviceType: device.type,
+        deviceOwner: device.owner,
+        status: SubscriptionStatus.ACTIVE,
         startDate: new Date(now),
         endDate: new Date(expiryTimestamp),
         daysRemaining,
         remainingBalance: deviceInfo.pricePerDataPoint,
-      dataPointsConsumed: 0,
-      autoRenewal: false
-    };
+        dataPointsConsumed: 0,
+        autoRenewal: false
+      };
 
-    addUserSubscription(newSubscription);
+      addUserSubscription(newSubscription);
       
       // Refresh subscriptions to ensure UI is up to date with blockchain data
       await refreshUserSubscriptions();
       
       // Navigate to stream page
-    router.push(`/stream/${device.id}`);
+      router.push(`/stream/${device.id}`);
     } catch (err: any) {
       console.error('Error purchasing subscription:', err);
       setError(err?.message || 'Failed to purchase subscription. Please try again.');

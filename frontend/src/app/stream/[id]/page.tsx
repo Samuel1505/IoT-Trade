@@ -163,8 +163,11 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
         const deviceAddress = device.deviceAddress as Address;
         
         // Check if user owns the device
-        const isOwner = device.owner?.toLowerCase() === address.toLowerCase() || 
-                       device.ownerAddress?.toLowerCase() === address.toLowerCase();
+        // UserDevice has ownerAddress, MarketplaceDevice has both owner and ownerAddress
+        const owner = 'owner' in device ? device.owner : null;
+        const ownerAddress = device.ownerAddress;
+        const isOwner = (owner?.toLowerCase() === address.toLowerCase()) || 
+                       (ownerAddress?.toLowerCase() === address.toLowerCase());
         
         if (isOwner) {
           setHasAccess(true);
@@ -186,7 +189,7 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
     if (device?.deviceAddress) {
       checkAccess();
     }
-  }, [device?.deviceAddress, device?.owner, device?.ownerAddress, address, isConnected]);
+  }, [device?.deviceAddress, device?.ownerAddress, address, isConnected]);
 
   // Read data from Somnia stream
   const fetchDeviceData = async () => {

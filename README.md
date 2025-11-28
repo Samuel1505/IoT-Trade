@@ -1,304 +1,614 @@
 # IoT-Trade
 
-A decentralized marketplace for IoT device data built on the Somnia blockchain. IoT-Trade allows device owners to monetize their sensor data by selling subscriptions to interested buyers, while providing subscribers with access to real-time data streams from GPS trackers, weather stations, and air quality monitors.
+> A decentralized marketplace for IoT device data streams built on Somnia blockchain
 
-## What is IoT-Trade?
+**IoT-Trade** is a Web3 platform that enables IoT device owners to monetize their sensor data by selling access to real-time data streams. Subscribers can discover devices, purchase subscriptions, and access live sensor data (GPS tracking, weather stations, air quality monitors) directly from the blockchain.
 
-Think of IoT-Trade as the "Airbnb for IoT data." If you own an IoT device—whether it's a GPS tracker monitoring vehicle fleets, a weather station in your backyard, or an air quality sensor in your office—you can register it on the platform and start selling access to its data stream. Buyers can browse available devices, purchase subscriptions, and access real-time data feeds directly through the platform.
+## Overview
 
-Everything is stored and verified on the Somnia blockchain, ensuring data authenticity, transparent payments, and decentralized ownership without requiring a traditional backend server.
+IoT-Trade connects IoT device owners with data consumers in a decentralized marketplace. The platform leverages **Somnia Data Streams** for on-chain data storage and **smart contracts** for device registry, subscriptions, and payment processing.
 
-## Who is This For?
+### Key Concepts
 
-### Device Owners
+- **Device Owners**: Register IoT devices, publish sensor data, set pricing, and earn revenue
+- **Data Subscribers**: Discover devices, purchase subscriptions, and access real-time sensor data
+- **Somnia Blockchain**: Stores all data streams on-chain with cryptographic provenance
+- **Smart Contracts**: Manage device registry, subscriptions, and payments
 
-Perfect for individuals, businesses, or organizations that:
+### Use Cases
 
-- Own IoT sensors or devices collecting environmental, location, or telemetry data
-- Want to monetize unused sensor data streams
-- Operate weather monitoring stations, air quality sensors, or GPS tracking systems
-- Seek a decentralized, trustless way to sell data subscriptions
-- Want full control over pricing and device availability
+- **GPS Tracking**: Fleet management, vehicle tracking, asset monitoring
+- **Weather Stations**: Environmental monitoring, agricultural data collection
+- **Air Quality Monitors**: Pollution monitoring, health tracking, urban planning
 
-**Example Use Cases:**
-- A shipping company with GPS trackers on vehicles can sell location data to logistics analytics companies
-- Homeowners with weather stations can offer hyperlocal weather data to gardening apps or agricultural services
-- Office buildings with air quality monitors can provide environmental data to health and wellness platforms
-- Researchers with sensor networks can monetize their data collection efforts
+## Features
 
-### Data Subscribers
+### Implemented Features
 
-Ideal for developers, researchers, and businesses that need:
+#### Core Infrastructure
+- Device registration via Somnia Data Streams SDK
+- Device registration via Smart Contract (DeviceRegistry)
+- On-chain device metadata storage
+- Data publishing (GPS, Weather, Air Quality) via SDK
+- Real-time data reading from Somnia streams
+- Device discovery from on-chain registry
+- Marketplace browsing with device filtering
+- Dashboard for device owners
+- Device pause/play functionality
+- Device settings page with manual data publishing
+- Stream viewer with multiple views (charts, table, map)
+- Wallet connection (AppKit/Reown)
+- Responsive UI with modern design
 
-- Real-time IoT data for applications, dashboards, or analytics
-- Verified, authentic sensor data from trusted sources
-- Access to diverse data sources without setting up their own sensors
-- Blockchain-verified data provenance for compliance or auditing
-- Transparent, pay-per-access pricing models
+#### Data Management
+- GPS tracker data streams (latitude, longitude, altitude, speed, heading)
+- Weather station data streams (temperature, humidity, pressure, wind, rainfall)
+- Air quality monitor data streams (PM2.5, PM10, CO2, NO2, O3, AQI)
+- Device metadata schemas
+- Schema encoding/decoding with Somnia SDK
+- Data validation and error handling
 
-**Example Use Cases:**
-- Weather app developers needing hyperlocal weather data from residential stations
-- Supply chain analytics companies requiring GPS tracking data from vehicle fleets
-- Environmental researchers studying air quality patterns across different locations
-- Smart city projects needing distributed sensor data from community contributors
-- Agricultural technology platforms requiring field-level weather and environmental data
+#### User Interface
+- Landing page with hero section
+- Marketplace with device listings
+- Device detail pages
+- Live stream visualization
+- Interactive charts (Recharts)
+- Map integration for GPS devices
+- Data table views
+- Subscription management UI
+- Device registration flow
+- Settings and configuration pages
 
-## Key Features
+### Upcoming Features
 
-### For Device Owners
+- Real subscription purchases (on-chain)
+- Subscription status loading from blockchain
+- Access control enforcement
+- Revenue tracking for device owners
+- Historical data tracking
+- Subscription auto-renewal
+- Subscription cancellation with refunds
+- Data access logs
 
-- **Device Registration**: Register GPS trackers, weather stations, or air quality monitors with metadata stored on-chain. Each device gets a unique blockchain address and is automatically discoverable in the marketplace.
+## Architecture
 
-- **Data Publishing**: Publish sensor data directly to Somnia blockchain using the Data Streams SDK. No backend infrastructure needed—just connect your device and start streaming.
+IoT-Trade uses a **hybrid architecture** combining SDK-based data streaming with smart contract-based business logic.
 
-- **Marketplace Listing**: Your devices automatically appear in the marketplace for potential subscribers. Set your own pricing, device availability, and subscription duration.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         Frontend                             │
+│  (Next.js 16, React 19, TypeScript, Tailwind CSS)          │
+│                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │   Pages      │  │  Components  │  │   Services   │     │
+│  │              │  │              │  │              │     │
+│  │ • Marketplace│  │ • UI Kit     │  │ • Device     │     │
+│  │ • Dashboard  │  │ • Charts     │  │ • Registry   │     │
+│  │ • Streams    │  │ • Maps       │  │ • Somnia     │     │
+│  │ • Register   │  │ • Forms      │  │ • Verification│    │
+│  └──────────────┘  └──────────────┘  └──────────────┘     │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            │ Web3
+                            │
+        ┌───────────────────┴───────────────────┐
+        │                                       │
+        ▼                                       ▼
+┌──────────────────┐                ┌──────────────────┐
+│  Somnia SDK      │                │  Smart Contracts │
+│                  │                │                  │
+│ • Data Publishing│                │ • DeviceRegistry │
+│ • Data Reading   │                │ • Subscriptions  │
+│ • Schema Mgmt    │                │ • Payments       │
+│ • Encoding       │                │ • Access Control │
+└──────────────────┘                └──────────────────┘
+        │                                       │
+        └───────────────┬───────────────────────┘
+                        │
+                        ▼
+              ┌──────────────────┐
+              │  Somnia Testnet  │
+              │  (Chain ID 50312)│
+              │                  │
+              │ • Data Streams   │
+              │ • Contract State │
+              │ • Transactions   │
+              └──────────────────┘
+```
 
-- **Revenue Generation**: Set your own price per data point and earn cryptocurrency directly from subscribers. Payments are processed automatically via smart contracts, with funds sent directly to your wallet.
+### Data Flow
 
-- **Device Management**: Pause or resume devices, update settings, and monitor performance through an intuitive dashboard. Control when your devices are available for subscription.
+1. **Device Registration**:
+   - User connects wallet → Enters device details → Smart contract registers device → Metadata stored on-chain
 
-- **Real-time Analytics**: View device metrics including uptime, update frequency, subscription counts, and earnings. Track how your data is being consumed.
+2. **Data Publishing**:
+   - Device owner publishes sensor data → Somnia SDK encodes data → Transaction sent to blockchain → Data stored on-chain
 
-### For Subscribers
+3. **Data Reading**:
+   - Subscriber selects device → Reads from Somnia stream → SDK decodes data → Displays in UI
 
-- **Device Discovery**: Browse active IoT devices filtered by type, location, and quality metrics. See device uptime, update frequency, and recent data samples before subscribing.
+4. **Subscription**:
+   - User browses marketplace → Selects subscription → Smart contract processes payment → Access granted
 
-- **Live Data Streams**: Access real-time data feeds with interactive charts, maps, and tables. Data updates automatically as devices publish new readings.
+## Tech Stack
 
-- **Subscription Management**: Purchase access to devices with transparent, blockchain-verified subscriptions. Multiple purchases extend your access period automatically.
+### Frontend
 
-- **Flexible Viewing**: Switch between chart view for time-series data, map view for GPS trackers, and table view for detailed records. View historical data points and export data for analysis.
+- **Framework**: Next.js 16.0.1 (App Router)
+- **UI Library**: React 19.2.0
+- **Language**: TypeScript 5
+- **Styling**: Tailwind CSS 4
+- **UI Components**: Radix UI primitives
+- **Charts**: Recharts 3.4.1
+- **Animations**: Framer Motion 12.23.24
+- **Icons**: Lucide React 0.553.0
 
-- **Historical Data**: Access recent data points to evaluate device quality before subscribing. Preview functionality lets you sample data before committing to a purchase.
+### Web3 & Blockchain
 
-### Platform Features
+- **Wallet Connection**: AppKit (Reown) 1.8.14
+- **Blockchain Library**: Viem 2.39.0
+- **React Hooks**: Wagmi 2.19.3
+- **Data Streaming**: Somnia Data Streams SDK 0.10.1
+- **Ethereum Library**: Ethers.js 6.15.0
 
-- **Blockchain Verification**: All device registrations and data are cryptographically verified on-chain. Data provenance is guaranteed, with each data point linked to its publisher address.
+### Smart Contracts
 
-- **Decentralized Marketplace**: No central server—everything runs on Somnia blockchain. Devices, subscriptions, and payments are all managed through smart contracts.
+- **Solidity**: 0.8.28
+- **Framework**: Hardhat 3.0.14
+- **Testing**: Hardhat Toolbox with Viem
+- **Network**: Somnia Testnet (Chain ID 50312)
+- **RPC**: https://dream-rpc.somnia.network
 
-- **Wallet Integration**: Connect with Web3 wallets like MetaMask to interact with the platform. All transactions are executed directly from your wallet.
+### Development Tools
 
-- **Real-time Updates**: Data streams update automatically as devices publish new readings. Subscribers see new data as soon as it's published to the blockchain.
-
-- **Access Control**: Subscription status is verified on-chain, ensuring only paying subscribers can access data. Access expiry is checked automatically for each data request.
-
-## Architecture Overview
-
-IoT-Trade consists of three main components working together:
-
-### 1. Frontend (Next.js Application)
-
-A modern web application built with Next.js 16 and React 19 that provides the user interface for both device owners and subscribers. The frontend handles wallet connections, device registration, marketplace browsing, subscription purchases, and real-time data visualization.
-
-**Tech Stack:**
-- Next.js 16 (App Router)
-- React 19
-- TypeScript
-- Tailwind CSS
-- Wagmi & Viem for Ethereum interactions
-- Recharts for data visualization
-- Somnia Data Streams SDK
-
-### 2. Smart Contracts (DeviceRegistry)
-
-A Solidity smart contract deployed on Somnia Testnet that serves as the on-chain registry for all devices. The contract handles device registration with metadata, subscription purchases and access management, payment processing (native tokens sent directly to device owners), device status toggling, and access expiry tracking for subscriptions.
-
-**Location:** `smartcontract/contracts/DeviceRegistry.sol`
-
-### 3. Somnia Data Streams
-
-The underlying blockchain infrastructure for storing and retrieving IoT data. Somnia provides on-chain data storage for sensor readings, schema-based data encoding/decoding, data provenance (each data point linked to publisher address), and efficient querying by publisher, schema, and data ID.
-
-**Supported Device Types:**
-- **GPS Trackers**: Latitude, longitude, altitude, speed, heading
-- **Weather Stations**: Temperature, humidity, pressure, wind speed/direction, rainfall
-- **Air Quality Monitors**: PM2.5, PM10, CO2, NO2, O3, AQI
-
-## How It Works
-
-### Device Registration Flow
-
-1. **Owner Connects Wallet**: Device owner connects their Web3 wallet to the platform
-2. **Enter Device Details**: Fill out device information (name, type, location, pricing)
-3. **Generate Device Address**: System generates a unique Ethereum address for the device
-4. **Register on Blockchain**: Device metadata is stored in the DeviceRegistry smart contract and also published to Somnia Data Streams
-5. **Device Appears in Marketplace**: Once registered, the device is discoverable by subscribers
-
-### Data Publishing Flow
-
-1. **Device Owner Publishes Data**: Using the dashboard, owner publishes sensor readings
-2. **Data Encoded with Schema**: Data is encoded according to device type schema (GPS, Weather, Air Quality)
-3. **Published to Somnia Blockchain**: Data stored on-chain with publisher address and timestamp
-4. **Subscribers Receive Updates**: Active subscribers can read the latest data in real-time
-
-### Subscription Flow
-
-1. **Browse Marketplace**: Subscriber discovers devices they want to subscribe to
-2. **Preview Device**: View device details, location, pricing, and recent data samples
-3. **Purchase Access**: Click "Subscribe" and approve the blockchain transaction
-4. **Payment Processed**: Native tokens sent directly to device owner via smart contract
-5. **Access Granted**: Subscription expiry stored on-chain, granting access to device stream
-6. **View Live Data**: Subscriber can now access the full data stream with charts, maps, and tables
-
-### Access Control
-
-When a subscriber tries to view device data:
-
-1. Frontend queries the DeviceRegistry contract for subscription expiry
-2. If expiry is in the future, access is granted
-3. Data is fetched from Somnia Data Streams using the device's publisher address
-4. If subscription expired or doesn't exist, access is denied
+- **Package Manager**: npm
+- **Linting**: ESLint (via Next.js)
+- **Type Checking**: TypeScript strict mode
+- **Code Formatting**: Prettier (recommended)
 
 ## Project Structure
 
 ```
 IoT-Trade/
-├── frontend/                    # Next.js web application
+├── frontend/                 # Next.js frontend application
 │   ├── src/
-│   │   ├── app/                # Next.js app router pages
-│   │   │   ├── dashboard/      # Device owner dashboard
-│   │   │   ├── marketplace/    # Browse available devices
-│   │   │   ├── device/[id]/    # Device preview & subscribe
-│   │   │   ├── stream/[id]/    # Live data stream viewer
-│   │   │   ├── register/       # Register new device
-│   │   │   └── subscription/   # Manage subscriptions
-│   │   ├── components/         # React components
-│   │   ├── services/           # Business logic services
-│   │   │   ├── deviceService.ts      # Device operations
-│   │   │   ├── registryService.ts    # Smart contract interactions
-│   │   │   ├── subscriptionService.ts # Subscription management
-│   │   │   └── deviceRegistry.ts     # Device discovery
-│   │   ├── lib/                # Utilities and helpers
-│   │   │   ├── somnia.ts       # Somnia SDK wrapper
-│   │   │   ├── schemas.ts      # Data schemas
-│   │   │   └── types.ts        # TypeScript types
-│   │   └── context/            # React context providers
+│   │   ├── app/             # Next.js App Router pages
+│   │   │   ├── dashboard/   # Device owner dashboard
+│   │   │   ├── device/      # Device detail & settings
+│   │   │   ├── marketplace/ # Device marketplace
+│   │   │   ├── register/    # Device registration
+│   │   │   ├── stream/      # Data stream viewer
+│   │   │   └── subscription/# Subscription management
+│   │   ├── components/      # React components
+│   │   │   ├── ui/         # UI primitives (Radix)
+│   │   │   └── shared/     # Shared components
+│   │   ├── config/         # Configuration files
+│   │   │   └── wagmi.ts    # Wagmi/AppKit config
+│   │   ├── context/        # React context providers
+│   │   ├── lib/            # Core libraries
+│   │   │   ├── abi/        # Contract ABIs
+│   │   │   ├── schemas.ts  # Data schemas
+│   │   │   ├── somnia.ts   # Somnia SDK wrapper
+│   │   │   └── types.ts    # TypeScript types
+│   │   └── services/       # Business logic services
+│   │       ├── deviceService.ts
+│   │       ├── deviceRegistry.ts
+│   │       └── subscriptionService.ts
+│   ├── public/             # Static assets
+│   ├── package.json
+│   └── tsconfig.json
 │
-├── smartcontract/              # Hardhat smart contract project
+├── smartcontract/          # Hardhat smart contract project
 │   ├── contracts/
-│   │   └── DeviceRegistry.sol  # Main registry contract
-│   ├── test/                   # Contract tests
-│   └── scripts/                # Deployment scripts
+│   │   └── DeviceRegistry.sol  # Main contract
+│   ├── test/
+│   │   └── DeviceRegistry.ts   # Contract tests
+│   ├── scripts/
+│   │   └── deploy-device-registry.ts
+│   ├── ignition/
+│   │   └── modules/
+│   │       └── DeviceRegistry.ts
+│   ├── hardhat.config.ts
+│   └── package.json
 │
-└── README.md                   # This file
+├── DEVICE_INTEGRATION.md   # Device integration guide
+├── INTEGRATION_ROADMAP.md  # Feature roadmap
+└── README.md               # This file
 ```
 
-## Key Concepts
+### Frontend Key Files
 
-### Device Types
+- **`src/lib/somnia.ts`**: Somnia SDK wrapper, data encoding/decoding
+- **`src/lib/schemas.ts`**: Data schemas for GPS, Weather, Air Quality
+- **`src/services/deviceService.ts`**: High-level device operations
+- **`src/services/deviceRegistry.ts`**: Smart contract interactions
+- **`src/config/wagmi.ts`**: Wallet and blockchain configuration
 
-IoT-Trade supports three device types, each with a specific data schema:
+### Smart Contract Key Files
 
-1. **GPS Tracker**: Tracks location data including latitude, longitude, altitude, speed, and heading. Perfect for vehicle tracking, asset monitoring, or location-based services.
+- **`contracts/DeviceRegistry.sol`**: Main registry contract
+- **`test/DeviceRegistry.ts`**: Comprehensive contract tests
+- **`scripts/deploy-device-registry.ts`**: Deployment script
 
-2. **Weather Station**: Monitors weather conditions including temperature, humidity, barometric pressure, wind speed, wind direction, and rainfall. Ideal for hyperlocal weather data, agricultural monitoring, or environmental research.
+## Getting Started
 
-3. **Air Quality Monitor**: Measures air quality metrics including PM2.5, PM10, CO2, NO2, O3, and overall AQI. Useful for environmental monitoring, health applications, or air quality research.
+### Prerequisites
 
-### Data Schemas
+- **Node.js**: v20+ (LTS recommended)
+- **npm**: v9+ (comes with Node.js)
+- **Git**: For cloning the repository
+- **Wallet**: MetaMask or compatible Web3 wallet
+- **Testnet Tokens**: STT (Somnia Testnet Token) for gas fees
 
-Each device type uses a predefined schema for encoding/decoding data. Schemas ensure data consistency and enable efficient storage on the blockchain. All schemas are defined in the frontend codebase and enforced when publishing data.
+### Installation
 
-### Subscription Model
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd IoT-Trade
+   ```
 
-- **Price per Data Point**: Device owners set a price (in native tokens) that subscribers pay for access
-- **Subscription Duration**: Each purchase grants access for a fixed duration (set during device registration)
-- **Auto-Extension**: Multiple purchases extend the subscription period from the current expiry date
-- **Direct Payment**: Payments are sent directly from subscriber to device owner via the smart contract—no intermediaries
+2. **Install frontend dependencies**:
+   ```bash
+   cd frontend
+   npm install
+   ```
 
-### Device Status
+3. **Install smart contract dependencies**:
+   ```bash
+   cd ../smartcontract
+   npm install
+   ```
 
-Devices can be in two states:
+### Environment Setup
 
-- **Active**: Device is accepting subscriptions and publishing data. Appears in marketplace and available for subscription.
-- **Inactive/Paused**: Device is temporarily disabled, not accepting new subscriptions but existing subscribers retain access until their subscription expires.
+#### Frontend Configuration
 
-## Use Cases
+1. Create `.env.local` in the `frontend/` directory:
+   ```bash
+   cd frontend
+   cp .env.local.example .env.local  # If example exists
+   ```
 
-### Smart City Initiatives
+2. Add your WalletConnect Project ID:
+   ```env
+   NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_project_id_here
+   ```
 
-City governments or urban planners can aggregate data from distributed IoT sensors owned by residents and businesses. Homeowners with weather stations or air quality monitors can contribute data to city-wide environmental monitoring systems, receiving payment for their contributions.
+   Get your Project ID from [https://cloud.reown.com](https://cloud.reown.com)
 
-### Supply Chain Analytics
+#### Smart Contract Configuration
 
-Logistics companies can monetize GPS tracking data from their vehicle fleets. Analytics companies can subscribe to multiple fleet data streams to build comprehensive supply chain visibility dashboards without deploying their own tracking infrastructure.
+1. Create `.env` in the `smartcontract/` directory:
+   ```bash
+   cd smartcontract
+   cp .env.example .env
+   ```
 
-### Environmental Research
+2. Add your configuration:
+   ```env
+   SOMNIA_RPC_URL=https://dream-rpc.somnia.network
+   SOMNIA_PRIVATE_KEY=your_private_key_here
+   ```
 
-Researchers studying climate patterns or air quality can access data from distributed sensor networks. Individual sensor owners can contribute to scientific research while monetizing their data collection efforts.
+   **Security Note**: Never commit private keys to version control!
 
-### Agricultural Technology
+### Running the Development Server
 
-Farmers with field-level sensors can sell environmental and weather data to agricultural technology platforms. These platforms can aggregate data from multiple farms to provide regional insights for crop management, irrigation optimization, or pest prediction.
+#### Frontend
 
-### Real Estate & Property Management
+```bash
+cd frontend
+npm run dev
+```
 
-Building managers with IoT sensors monitoring air quality, temperature, or occupancy can provide data to property valuation services, health and wellness platforms, or smart building automation systems.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### Weather Forecasting
+#### Smart Contracts
 
-Hyperlocal weather data from residential weather stations can supplement official weather services. Weather apps can offer neighborhood-level forecasts by aggregating data from distributed weather stations.
+Run tests:
+```bash
+cd smartcontract
+npm test
+```
 
-## Roadmap
+Deploy to Somnia Testnet:
+```bash
+npm run deploy:somnia
+```
 
-### Completed Features ✅
+### Building for Production
 
-- Device registration on blockchain (both smart contract and data streams)
-- Data publishing to Somnia streams for all device types
-- Device discovery and marketplace browsing
-- Owner dashboard with device management capabilities
-- Subscription purchases with on-chain payments
-- Real-time data streaming and visualization
-- Device pause/play functionality
-- Subscription loading from blockchain
+#### Frontend
 
-### Upcoming Features 🚧
+```bash
+cd frontend
+npm run build
+npm start
+```
 
-- Access control enforcement (block unauthorized data access at the API level)
-- Revenue tracking dashboard for device owners
-- Subscription renewal reminders and auto-renewal options
-- Advanced filtering and search in marketplace
-- Device analytics and performance metrics dashboard
-- Multi-chain support for broader blockchain ecosystem
-- Mobile application for device owners and subscribers
+The production build will be optimized and ready for deployment.
 
-See [INTEGRATION_ROADMAP.md](./INTEGRATION_ROADMAP.md) for detailed progress and implementation status.
+## Smart Contracts
 
-## Technology Stack
+### DeviceRegistry Contract
 
-**Frontend:**
-- Next.js 16 with App Router
-- React 19
-- TypeScript
-- Tailwind CSS for styling
-- Wagmi & Viem for blockchain interactions
-- Recharts for data visualization
-- Radix UI components
-- Somnia Data Streams SDK
+The `DeviceRegistry` contract provides:
 
-**Smart Contracts:**
-- Solidity 0.8.28
-- Hardhat development environment
-- Viem for contract interactions
-- Deployed on Somnia Testnet (Chain ID: 50312)
+- **Device Registration**: Register devices with metadata
+- **Device Updates**: Update device information (owner-only)
+- **Device Discovery**: Query devices by owner or list all devices
+- **Subscription Management**: Purchase device access, track expiry
+- **Payment Processing**: Handle payments and track revenue
 
-**Blockchain Infrastructure:**
-- Somnia Network
-- Somnia Data Streams for on-chain data storage
-- Ethereum-compatible wallet support
+#### Contract Functions
 
-## License
+```solidity
+// Register a new device
+function registerDevice(
+    address deviceAddress,
+    string calldata name,
+    string calldata deviceType,
+    string calldata location,
+    uint256 pricePerDataPoint,
+    uint256 subscriptionDuration,
+    string calldata metadataURI
+) external;
 
-This project is licensed under the MIT License.
+// Update device metadata (owner-only)
+function updateDevice(
+    address deviceAddress,
+    string calldata name,
+    string calldata deviceType,
+    string calldata location,
+    uint256 pricePerDataPoint,
+    uint256 subscriptionDuration,
+    string calldata metadataURI
+) external;
 
-## Acknowledgments
+// Toggle device availability
+function setDeviceActive(address deviceAddress, bool isActive) external;
 
-- **Somnia Network** for providing the blockchain infrastructure and Data Streams SDK
-- **Next.js** team for the excellent React framework
-- **Hardhat** for the smart contract development tools
-- All contributors and early testers of the platform
+// Purchase subscription
+function purchaseDeviceAccess(address deviceAddress) external payable;
 
----
+// Check access expiry
+function getAccessExpiry(address deviceAddress, address subscriber) 
+    external view returns (uint256);
+```
 
-**Built with ❤️ on the Somnia blockchain**
+#### Deployment
+
+```bash
+cd smartcontract
+npm run deploy:somnia
+```
+
+The contract address will be printed after deployment. Update `frontend/src/config/wagmi.ts` with the deployed address.
+
+#### Testing
+
+```bash
+cd smartcontract
+npm test
+```
+
+Tests cover:
+- Device registration and retrieval
+- Owner-only updates
+- Device activation/deactivation
+- Subscription purchases
+- Access expiry tracking
+
+## Frontend
+
+### Pages Overview
+
+- **`/`**: Landing page with features and use cases
+- **`/marketplace`**: Browse all registered devices
+- **`/dashboard`**: Device owner's dashboard (requires wallet)
+- **`/register`**: Register a new IoT device
+- **`/device/[id]`**: Device detail page with preview
+- **`/device/[id]/settings`**: Device settings and data publishing
+- **`/stream/[id]`**: Live data stream viewer
+- **`/subscription`**: Manage subscriptions
+
+### Key Services
+
+#### Device Service (`src/services/deviceService.ts`)
+
+High-level device operations:
+
+```typescript
+// Register device
+await registerDevice(walletClient, name, type, location, price, owner, deviceAddress);
+
+// Publish GPS data
+await publishGPSData(walletClient, deviceAddress, {
+  timestamp: BigInt(Date.now()),
+  latitude: 37.7749,
+  longitude: -122.4194,
+  // ...
+});
+
+// Read device data
+const data = await readDeviceData(publisherAddress, deviceAddress, deviceType);
+```
+
+#### Somnia SDK Service (`src/lib/somnia.ts`)
+
+Core SDK wrapper for data operations:
+
+```typescript
+// Compute schema ID
+const schemaId = await computeSchemaId(GPS_TRACKER_SCHEMA);
+
+// Encode GPS data
+const encoded = encodeGPSData({ latitude, longitude, ... });
+
+// Publish data
+await publishData(walletClient, dataId, schema, encodedData);
+
+// Read data
+const data = await readData(schema, publisherAddress, dataId);
+```
+
+### Wallet Connection
+
+The app uses **AppKit (Reown)** for wallet connection:
+
+1. Click "Connect Wallet" button
+2. Select your wallet provider (MetaMask, WalletConnect, etc.)
+3. Approve connection
+4. Ensure wallet is connected to **Somnia Testnet**
+
+**Somnia Testnet Details**:
+- **Chain ID**: 50312
+- **RPC URL**: https://dream-rpc.somnia.network
+- **Explorer**: https://shannon-explorer.somnia.network
+
+## Device Integration
+
+IoT devices can integrate with IoT-Trade using multiple methods:
+
+### Option 1: HTTP REST API (Recommended)
+
+Publish data via REST API:
+
+```bash
+curl -X POST https://api.iot-trade.io/v1/devices/{deviceId}/data/gps \
+  -H "Authorization: Bearer {apiKey}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "altitude": 10,
+    "accuracy": 5,
+    "speed": 0,
+    "heading": 0
+  }'
+```
+
+### Option 2: Python SDK
+
+```python
+from iot_trade_sdk import IoTTradeClient
+
+client = IoTTradeClient(
+    device_id="device-abc123",
+    api_key="ak_your_api_key",
+    rpc_url="https://dream-rpc.somnia.network"
+)
+
+client.publish_gps_data(
+    latitude=37.7749,
+    longitude=-122.4194,
+    altitude=10,
+    accuracy=5,
+    speed=0,
+    heading=0
+)
+```
+
+### Option 3: Node.js SDK
+
+```javascript
+const { IoTTradeClient } = require('@iot-trade/sdk');
+
+const client = new IoTTradeClient({
+  deviceId: 'device-abc123',
+  apiKey: 'ak_your_api_key',
+  rpcUrl: 'https://dream-rpc.somnia.network'
+});
+
+await client.publishGPSData({
+  latitude: 37.7749,
+  longitude: -122.4194,
+  // ...
+});
+```
+
+### Option 4: Direct Somnia SDK Integration
+
+For advanced users, integrate directly with Somnia Data Streams SDK:
+
+```typescript
+import { SDK, SchemaEncoder } from "@somnia-chain/streams";
+
+const sdk = new SDK({
+  public: publicClient,
+  wallet: walletClient
+});
+
+const schemaId = await sdk.streams.computeSchemaId(GPS_SCHEMA);
+const encoder = new SchemaEncoder(GPS_SCHEMA);
+const encodedData = encoder.encodeData([...]);
+
+await sdk.streams.set([{
+  id: dataId,
+  schemaId: schemaId,
+  data: encodedData
+}]);
+```
+
+### Device Verification
+
+Devices can verify ownership during registration by:
+
+1. **Blockchain Verification**: Read verification code from Somnia blockchain
+2. **Display Code**: Show code on device screen
+3. **User Input**: User enters code in web UI
+4. **Registration**: Proceed with device registration
+
+See `frontend/DEVICE_VERIFICATION.md` for detailed implementation.
+
+### Supported Device Types
+
+1. **GPS Tracker**
+   - Schema: `uint64 timestamp, int32 latitude, int32 longitude, int32 altitude, uint32 accuracy, uint32 speed, uint32 heading, bytes32 entityId, uint256 nonce`
+   - Use cases: Fleet tracking, asset monitoring
+
+2. **Weather Station**
+   - Schema: `uint64 timestamp, int32 temperature, uint32 humidity, uint32 pressure, uint32 windSpeed, uint32 windDirection, uint32 rainfall, bytes32 entityId, uint256 nonce`
+   - Use cases: Environmental monitoring, agriculture
+
+3. **Air Quality Monitor**
+   - Schema: `uint64 timestamp, uint32 pm25, uint32 pm10, uint32 co2, uint32 no2, uint32 o3, uint32 aqi, bytes32 entityId, uint256 nonce`
+   - Use cases: Pollution monitoring, health tracking
+
+
+
+
+See `INTEGRATION_ROADMAP.md` for detailed implementation steps.
+
+## Documentation
+
+### Project Documentation
+
+- **[INTEGRATION_ROADMAP.md](./INTEGRATION_ROADMAP.md)**: Feature roadmap and implementation plan
+- **[DEVICE_INTEGRATION.md](./DEVICE_INTEGRATION.md)**: Guide for integrating IoT devices
+
+### Frontend Documentation
+
+- **[frontend/README.md](./frontend/README.md)**: Frontend-specific setup
+- **[frontend/SOMNIA_INTEGRATION.md](./frontend/SOMNIA_INTEGRATION.md)**: Somnia SDK integration details
+- **[frontend/SOMNIA_VERIFICATION.md](./frontend/SOMNIA_VERIFICATION.md)**: Integration verification checklist
+- **[frontend/DEVICE_INTEGRATION.md](./frontend/DEVICE_INTEGRATION.md)**: Device integration guide
+- **[frontend/DEVICE_VERIFICATION.md](./frontend/DEVICE_VERIFICATION.md)**: Device ownership verification
+- **[frontend/WALLET_SETUP.md](./frontend/WALLET_SETUP.md)**: Wallet connection setup
+- **[frontend/SDK_VS_SMART_CONTRACT.md](./frontend/SDK_VS_SMART_CONTRACT.md)**: When to use SDK vs contracts
+- **[frontend/SMART_CONTRACT_REQUIREMENTS.md](./frontend/SMART_CONTRACT_REQUIREMENTS.md)**: Contract requirements guide
+
+### Smart Contract Documentation
+
+- **[smartcontract/README.md](./smartcontract/README.md)**: Smart contract setup and deployment
+
+### External Resources
+
+- [Somnia Data Streams Documentation](https://docs.somnia.network/somnia-data-streams)
+- [Somnia Testnet Explorer](https://shannon-explorer.somnia.network)
+- [AppKit (Reown) Documentation](https://docs.reown.com/appkit/react)
+- [Wagmi Documentation](https://wagmi.sh)
+- [Viem Documentation](https://viem.sh)
+
