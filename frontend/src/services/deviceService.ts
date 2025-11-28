@@ -409,7 +409,7 @@ export async function readDeviceMetadata(
     // Don't log DataView/ArrayBuffer errors as errors - they're expected when data doesn't exist
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (!errorMessage.includes('ArrayBuffer') && !errorMessage.includes('DataView')) {
-      console.error("Error reading device metadata:", error);
+    console.error("Error reading device metadata:", error);
     }
     return null;
   }

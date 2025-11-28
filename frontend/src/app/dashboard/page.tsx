@@ -197,8 +197,8 @@ export default function DashboardPage() {
                           </>
                         ) : device.status === DeviceStatus.ONLINE ? (
                           <>
-                            <Pause className="w-3 h-3 mr-1" />
-                            Pause
+                        <Pause className="w-3 h-3 mr-1" />
+                        Pause
                           </>
                         ) : (
                           <>

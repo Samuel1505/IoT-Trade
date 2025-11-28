@@ -428,7 +428,7 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
                             ? `${Math.floor(device.subscriptionDuration / 86400)} day${Math.floor(device.subscriptionDuration / 86400) !== 1 ? 's' : ''}`
                             : 'Loading...'}
                         </p>
-                      </div>
+                          </div>
                       <div className="flex items-center justify-between">
                         <p className="body-base text-gray-700">Price</p>
                         <div className="text-right">
@@ -436,7 +436,7 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
                             {formatEthAmount(device.pricePerDataPoint)}
                           </p>
                         </div>
-                      </div>
+                            </div>
                       {device.subscriptionDuration && (
                         <div className="pt-3 border-t border-blue-200">
                           <p className="text-xs text-gray-600">

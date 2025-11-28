@@ -118,7 +118,7 @@ export async function fetchAllRegistryDevices(): Promise<RegistryDevice[]> {
 
 export async function fetchDevicesByOwner(owner: Address): Promise<RegistryDevice[]> {
   try {
-    const contractAddress = requireContractAddress();
+  const contractAddress = requireContractAddress();
     
     // Add timeout to prevent hanging
     const timeoutPromise = new Promise<never>((_, reject) => 
@@ -126,10 +126,10 @@ export async function fetchDevicesByOwner(owner: Address): Promise<RegistryDevic
     );
     
     const addressesPromise = publicClient.readContract({
-      address: contractAddress,
-      abi: deviceRegistryAbi,
-      functionName: 'getDevicesByOwner',
-      args: [owner],
+    address: contractAddress,
+    abi: deviceRegistryAbi,
+    functionName: 'getDevicesByOwner',
+    args: [owner],
     }) as Promise<Address[]>;
     
     const addresses = await Promise.race([addressesPromise, timeoutPromise]);
@@ -140,21 +140,21 @@ export async function fetchDevicesByOwner(owner: Address): Promise<RegistryDevic
     }
 
     const devices = await Promise.allSettled(
-      addresses.map(async (deviceAddress) => {
+    addresses.map(async (deviceAddress) => {
         try {
-          const device = (await publicClient.readContract({
-            address: contractAddress,
-            abi: deviceRegistryAbi,
-            functionName: 'getDevice',
-            args: [deviceAddress],
-          })) as ContractDevice;
-          return toRegistryDevice(deviceAddress, device);
+      const device = (await publicClient.readContract({
+        address: contractAddress,
+        abi: deviceRegistryAbi,
+        functionName: 'getDevice',
+        args: [deviceAddress],
+      })) as ContractDevice;
+      return toRegistryDevice(deviceAddress, device);
         } catch (error) {
           console.error(`Error fetching device ${deviceAddress}:`, error);
           return null;
         }
-      }),
-    );
+    }),
+  );
 
     return devices
       .map((result) => result.status === 'fulfilled' ? result.value : null)

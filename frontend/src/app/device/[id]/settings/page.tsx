@@ -254,7 +254,7 @@ export default function DeviceSettingsPage({ params }: { params: Promise<{ id: s
       );
 
       // Update local state
-      updateUserDevice(device.id, {
+    updateUserDevice(device.id, {
         status: newStatus
       });
 

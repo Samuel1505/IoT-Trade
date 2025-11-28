@@ -45,7 +45,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       // Load devices from on-chain registry (primary method)
       const devices = await loadUserDevicesFromRegistry(address);
-      setUserDevices(devices);
+        setUserDevices(devices);
     } catch (error) {
       console.error('Error loading user devices:', error);
       // Keep existing devices on error

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAccount } from 'wagmi';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { useApp } from '@/context/AppContext';
 import { ViewMode, TimeRange, DeviceType, DeviceStatus } from '@/lib/enums';
 import { formatDateTime, formatRelativeTime } from '@/lib/formatters';
 import { readDeviceData } from '@/services/deviceService';
+import { hasActiveAccess } from '@/services/subscriptionService';
 import { parseError, getUserFriendlyMessage } from '@/lib/errors';
 import type { DataPoint, MarketplaceDevice, UserDevice } from '@/lib/types';
 import type { Address } from 'viem';
@@ -21,7 +23,8 @@ import type { Address } from 'viem';
 export default function LiveDashboardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { marketplaceDevices, userDevices, refreshMarketplaceDevices } = useApp();
+  const { address, isConnected } = useAccount();
+  const { marketplaceDevices, userDevices, refreshMarketplaceDevices, refreshUserSubscriptions } = useApp();
   const [device, setDevice] = useState<(MarketplaceDevice | UserDevice) | null>(null);
   const [isLoadingDevice, setIsLoadingDevice] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.CHART);
@@ -30,9 +33,12 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   const deviceLoadedRef = useRef(false);
   const [chartMounted, setChartMounted] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
 
   // Load device by ID - only run once per id
   useEffect(() => {
@@ -53,6 +59,11 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
       setError(null);
       
       try {
+        // Refresh subscriptions first in case user just purchased
+        if (isConnected && address) {
+          await refreshUserSubscriptions();
+        }
+
         // First try to find in existing devices
         let foundDevice = [...marketplaceDevices, ...userDevices].find(d => d.id === id && d.deviceAddress);
         
@@ -136,9 +147,62 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // Check if user has access to this device
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!device || !device.deviceAddress || !isConnected || !address) {
+        // If not connected, allow viewing (but won't be able to read data)
+        setHasAccess(false);
+        setIsCheckingAccess(false);
+        return;
+      }
+
+      setIsCheckingAccess(true);
+
+      try {
+        const deviceAddress = device.deviceAddress as Address;
+        
+        // Check if user owns the device
+        // UserDevice has ownerAddress, MarketplaceDevice has both owner and ownerAddress
+        const owner = 'owner' in device ? device.owner : null;
+        const ownerAddress = device.ownerAddress;
+        const isOwner = (owner?.toLowerCase() === address.toLowerCase()) || 
+                       (ownerAddress?.toLowerCase() === address.toLowerCase());
+        
+        if (isOwner) {
+          setHasAccess(true);
+          setIsCheckingAccess(false);
+          return;
+        }
+
+        // Check if user has active subscription
+        const hasSubscription = await hasActiveAccess(address, deviceAddress);
+        setHasAccess(hasSubscription);
+      } catch (err) {
+        console.error('Error checking access:', err);
+        setHasAccess(false);
+      } finally {
+        setIsCheckingAccess(false);
+      }
+    };
+
+    if (device?.deviceAddress) {
+      checkAccess();
+    }
+  }, [device?.deviceAddress, device?.ownerAddress, address, isConnected]);
+
   // Read data from Somnia stream
   const fetchDeviceData = async () => {
     if (!device) return;
+
+    // Check access before fetching data
+    if (hasAccess === false && isConnected && address) {
+      if (liveData.length === 0) {
+        setError('You need to subscribe to access this device\'s data. Please subscribe from the device page.');
+      }
+      setIsLoading(false);
+      return;
+    }
 
     // Validate device addresses
     const deviceAddress = device.deviceAddress;
@@ -209,21 +273,21 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
 
   // Initial fetch and periodic updates
   useEffect(() => {
-    if (!device || !device.deviceAddress) return;
+    if (!device || !device.deviceAddress || isCheckingAccess) return;
 
-    // Fetch immediately
+    // Only fetch if user has access or is not connected (will show access error)
     fetchDeviceData();
 
-    // Poll for updates every 5 seconds
+    // Poll for updates every 5 seconds (only if has access)
     const interval = setInterval(() => {
-      if (device && device.deviceAddress) {
+      if (device && device.deviceAddress && (hasAccess === true || !isConnected)) {
         fetchDeviceData();
       }
     }, 5000);
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [device?.id]);
+  }, [device?.id, hasAccess, isCheckingAccess]);
 
   // For devices without data, show mock data fallback
   useEffect(() => {
@@ -241,37 +305,37 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
     setLiveData([mockPoint]);
   }, [device, liveData.length]);
 
-  // Mount chart only when chart tab is active and container is ready
+  // Measure container dimensions and mount chart
   useEffect(() => {
-    if (viewMode === ViewMode.CHART && chartContainerRef.current) {
-      let retryTimer: NodeJS.Timeout | null = null;
-      
-      // Small delay to ensure container has dimensions
-      const timer = setTimeout(() => {
-        if (chartContainerRef.current) {
-          const rect = chartContainerRef.current.getBoundingClientRect();
-          // Ensure container has valid dimensions (minimum 384px height, 400px width)
-          if (rect.width >= 400 && rect.height >= 384) {
-            setChartMounted(true);
-          } else {
-            // If dimensions are invalid, retry after a short delay
-            retryTimer = setTimeout(() => {
-              if (chartContainerRef.current) {
-                const retryRect = chartContainerRef.current.getBoundingClientRect();
-                if (retryRect.width >= 400 && retryRect.height >= 384) {
-                  setChartMounted(true);
-                }
-              }
-            }, 200);
-          }
+    const measureContainer = () => {
+      if (chartContainerRef.current) {
+        const rect = chartContainerRef.current.getBoundingClientRect();
+        const width = rect.width || 0;
+        const height = rect.height || 0;
+        
+        setContainerDimensions({ width, height });
+        
+        // Only mount if dimensions are valid (minimum 400px width, 384px height)
+        if (width >= 400 && height >= 384) {
+          setChartMounted(true);
+        } else {
+          setChartMounted(false);
         }
-      }, 100);
+      } else {
+        setChartMounted(false);
+      }
+    };
+
+    if (viewMode === ViewMode.CHART) {
+      // Initial measurement with delay
+      const timer = setTimeout(measureContainer, 100);
+      
+      // Re-measure on window resize
+      window.addEventListener('resize', measureContainer);
       
       return () => {
         clearTimeout(timer);
-        if (retryTimer) {
-          clearTimeout(retryTimer);
-        }
+        window.removeEventListener('resize', measureContainer);
         setChartMounted(false);
       };
     } else {
@@ -279,15 +343,17 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
     }
   }, [viewMode, liveData.length]);
 
-  // Show loading state while loading device
-  if (isLoadingDevice) {
+  // Show loading state while loading device or checking access
+  if (isLoadingDevice || isCheckingAccess) {
     return (
       <>
         <Header />
         <main className="min-h-screen pt-24 pb-12 px-6">
           <div className="max-w-7xl mx-auto text-center py-12">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary-blue" />
-            <p className="body-lg text-gray-600">Loading device...</p>
+            <p className="body-lg text-gray-600">
+              {isLoadingDevice ? 'Loading device...' : 'Checking access...'}
+            </p>
           </div>
         </main>
       </>
@@ -295,7 +361,7 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
   }
 
   // Show error if device not found
-  if (!device || error) {
+  if (!device || (error && !device.deviceAddress)) {
     return (
       <>
         <Header />
@@ -305,6 +371,44 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
             <Button onClick={() => router.push('/marketplace')} variant="outline">
               Back to Marketplace
             </Button>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  // Show access denied message if user doesn't have access
+  if (hasAccess === false && isConnected && address && device.deviceAddress) {
+    return (
+      <>
+        <Header />
+        <main className="min-h-screen pt-24 pb-12 px-6">
+          <div className="max-w-7xl mx-auto">
+            <Card>
+              <CardContent className="py-16">
+                <Alert className="bg-yellow-50 border-yellow-200">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-700 mb-4">
+                    <p className="font-semibold mb-2">Subscription Required</p>
+                    <p>You need to subscribe to access this device's data stream.</p>
+                  </AlertDescription>
+                </Alert>
+                <div className="flex gap-4 mt-6">
+                  <Button 
+                    onClick={() => router.push(`/device/${device.id}`)}
+                    className="flex-1"
+                  >
+                    Subscribe to Device
+                  </Button>
+                  <Button 
+                    onClick={() => router.push('/marketplace')} 
+                    variant="outline"
+                  >
+                    Back to Marketplace
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </main>
       </>
@@ -516,11 +620,21 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
                       </div>
                       <div 
                         ref={chartContainerRef}
-                        className="h-96 w-full"
-                        style={{ minWidth: 400, minHeight: 384 }}
+                        className="w-full"
+                        style={{ 
+                          minWidth: '400px',
+                          minHeight: '384px',
+                          height: '384px',
+                          width: '100%'
+                        }}
                       >
-                        {chartMounted && chartData.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%" minHeight={384}>
+                        {chartMounted && chartData.length > 0 && containerDimensions.width > 0 && containerDimensions.height > 0 ? (
+                          <ResponsiveContainer 
+                            width="100%" 
+                            height="100%"
+                            minHeight={384}
+                            minWidth={400}
+                          >
                             <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                               <XAxis 
@@ -550,7 +664,7 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
                             </LineChart>
                           </ResponsiveContainer>
                         ) : (
-                          <div className="h-full flex items-center justify-center">
+                          <div className="h-full flex items-center justify-center" style={{ minHeight: '384px' }}>
                             <Loader2 className="w-6 h-6 animate-spin text-primary-blue" />
                           </div>
                         )}
