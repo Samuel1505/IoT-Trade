@@ -59,9 +59,12 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
       setError(null);
       
       try {
-        // Refresh subscriptions first in case user just purchased
+        // Refresh subscriptions in background (don't block device loading)
+        // This can be slow since it checks all marketplace devices
         if (isConnected && address) {
-          await refreshUserSubscriptions();
+          refreshUserSubscriptions().catch(err => {
+            console.error('Error refreshing subscriptions in background:', err);
+          });
         }
 
         // First try to find in existing devices
@@ -150,8 +153,15 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
   // Check if user has access to this device
   useEffect(() => {
     const checkAccess = async () => {
-      if (!device || !device.deviceAddress || !isConnected || !address) {
-        // If not connected, allow viewing (but won't be able to read data)
+      if (!device || !device.deviceAddress) {
+        // No device loaded yet, reset access state
+        setHasAccess(null);
+        setIsCheckingAccess(false);
+        return;
+      }
+
+      // If not connected, allow viewing (but won't be able to read data)
+      if (!isConnected || !address) {
         setHasAccess(false);
         setIsCheckingAccess(false);
         return;
@@ -175,7 +185,7 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
           return;
         }
 
-        // Check if user has active subscription
+        // Check if user has active subscription (direct blockchain call, fast)
         const hasSubscription = await hasActiveAccess(address, deviceAddress);
         setHasAccess(hasSubscription);
       } catch (err) {
@@ -188,6 +198,10 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
 
     if (device?.deviceAddress) {
       checkAccess();
+    } else {
+      // Reset access state if device not loaded
+      setHasAccess(null);
+      setIsCheckingAccess(false);
     }
   }, [device?.deviceAddress, device?.ownerAddress, address, isConnected]);
 
@@ -273,12 +287,20 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
 
   // Initial fetch and periodic updates
   useEffect(() => {
-    if (!device || !device.deviceAddress || isCheckingAccess) return;
+    if (!device || !device.deviceAddress) return;
 
-    // Only fetch if user has access or is not connected (will show access error)
-    fetchDeviceData();
+    // Wait for access check to complete before fetching
+    if (isCheckingAccess) return;
 
-    // Poll for updates every 5 seconds (only if has access)
+    // Fetch data if:
+    // - User has access (hasAccess === true)
+    // - User is not connected (will show access error in fetchDeviceData)
+    // - Access is still being determined (hasAccess === null) - try once to see if data is available
+    if (hasAccess === true || !isConnected || hasAccess === null) {
+      fetchDeviceData();
+    }
+
+    // Poll for updates every 5 seconds (only if has access or not connected)
     const interval = setInterval(() => {
       if (device && device.deviceAddress && (hasAccess === true || !isConnected)) {
         fetchDeviceData();
@@ -308,8 +330,8 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
   // Measure container dimensions and mount chart
   useEffect(() => {
     const measureContainer = () => {
-      if (chartContainerRef.current) {
-        const rect = chartContainerRef.current.getBoundingClientRect();
+        if (chartContainerRef.current) {
+          const rect = chartContainerRef.current.getBoundingClientRect();
         const width = rect.width || 0;
         const height = rect.height || 0;
         
@@ -317,7 +339,7 @@ export default function LiveDashboardPage({ params }: { params: Promise<{ id: st
         
         // Only mount if dimensions are valid (minimum 400px width, 384px height)
         if (width >= 400 && height >= 384) {
-          setChartMounted(true);
+            setChartMounted(true);
         } else {
           setChartMounted(false);
         }

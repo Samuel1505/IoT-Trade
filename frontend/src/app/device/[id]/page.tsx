@@ -34,6 +34,12 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [purchaseSuccess, setPurchaseSuccess] = useState<{
+    txHash: string;
+    deviceId: string;
+    deviceName: string;
+    daysRemaining: number;
+  } | null>(null);
   
   const defaultTab = searchParams.get('tab') || 'preview';
   
@@ -258,26 +264,35 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
       // Create subscription from blockchain data
       const newSubscription: UserSubscription = {
         id: `sub-${device.id}-${now}`,
-        deviceId: device.id,
-        deviceName: device.name,
-        deviceType: device.type,
-        deviceOwner: device.owner,
+      deviceId: device.id,
+      deviceName: device.name,
+      deviceType: device.type,
+      deviceOwner: device.owner,
         status: SubscriptionStatus.ACTIVE,
         startDate: new Date(now),
         endDate: new Date(expiryTimestamp),
         daysRemaining,
         remainingBalance: deviceInfo.pricePerDataPoint,
-        dataPointsConsumed: 0,
-        autoRenewal: false
-      };
+      dataPointsConsumed: 0,
+      autoRenewal: false
+    };
 
       addUserSubscription(newSubscription);
       
-      // Refresh subscriptions to ensure UI is up to date with blockchain data
-      await refreshUserSubscriptions();
+      // Refresh subscriptions in background to ensure UI is up to date
+      refreshUserSubscriptions().catch(err => {
+        console.error('Error refreshing subscriptions:', err);
+      });
       
-      // Navigate to stream page
-      router.push(`/stream/${device.id}`);
+      // Show success screen instead of immediately redirecting
+      setPurchaseSuccess({
+        txHash,
+        deviceId: device.id,
+        deviceName: device.name,
+        daysRemaining
+      });
+      
+      setIsPurchasing(false);
     } catch (err: any) {
       console.error('Error purchasing subscription:', err);
       setError(err?.message || 'Failed to purchase subscription. Please try again.');
@@ -292,6 +307,80 @@ export default function DevicePreviewPage({ params }: { params: Promise<{ id: st
   };
 
   const pricing = getPricing();
+
+  // Show success screen after purchase
+  if (purchaseSuccess) {
+    return (
+      <>
+        <Header />
+        <main className="min-h-screen pt-24 pb-12 px-6">
+          <div className="max-w-2xl mx-auto">
+            <Card>
+              <CardContent className="py-12 px-6">
+                <div className="text-center mb-8">
+                  <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="w-12 h-12 text-success-green" />
+                  </div>
+                  <h2 className="heading-lg mb-2">🎉 Subscription Activated!</h2>
+                  <p className="body-base text-gray-600 mb-6">
+                    You now have access to <strong>{purchaseSuccess.deviceName}</strong>
+                  </p>
+                </div>
+
+                <div className="space-y-4 mb-8">
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="body-sm text-gray-600 mb-1">Subscription Duration</p>
+                    <p className="body-base font-semibold">{purchaseSuccess.daysRemaining} days remaining</p>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="body-sm text-gray-600 mb-1">Transaction Hash</p>
+                    <p className="body-base font-mono text-sm break-all">{purchaseSuccess.txHash}</p>
+                    <a 
+                      href={`https://shannon-explorer.somnia.network/tx/${purchaseSuccess.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="body-sm text-primary-blue hover:underline mt-1 inline-block"
+                    >
+                      View on Explorer
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button 
+                    onClick={() => router.push(`/stream/${purchaseSuccess.deviceId}`)}
+                    className="flex-1 gradient-primary"
+                    size="lg"
+                  >
+                    View Data Stream
+                  </Button>
+                  <Button 
+                    onClick={() => router.push('/subscription')}
+                    variant="outline"
+                    className="flex-1"
+                    size="lg"
+                  >
+                    My Subscriptions
+                  </Button>
+                </div>
+
+                <Button 
+                  onClick={() => {
+                    setPurchaseSuccess(null);
+                    router.push('/marketplace');
+                  }}
+                  variant="ghost"
+                  className="w-full mt-4"
+                >
+                  Continue Browsing
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
